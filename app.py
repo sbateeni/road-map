@@ -72,8 +72,9 @@ if st.session_state.specs:
                     st.metric("البلد", origin_coords['country_info']['country'])
                     st.metric("العملة", f"{origin_coords['country_info']['currency']['name']} ({origin_coords['country_info']['currency']['symbol']})")
                 with col2:
-                    st.metric("سعر الوقود (محلي)", f"{origin_coords['country_info']['fuel_price']['local']} {origin_coords['country_info']['currency']['symbol']}")
-                    st.metric("سعر الوقود (دولار)", f"{origin_coords['country_info']['fuel_price']['usd']} $")
+                    st.metric("سعر البنزين 95", f"{origin_coords['country_info']['fuel_prices']['95']} {origin_coords['country_info']['currency']['symbol']}")
+                    st.metric("سعر البنزين 91", f"{origin_coords['country_info']['fuel_prices']['91']} {origin_coords['country_info']['currency']['symbol']}")
+                    st.metric("سعر الديزل", f"{origin_coords['country_info']['fuel_prices']['diesel']} {origin_coords['country_info']['currency']['symbol']}")
     
     if destination:
         with st.spinner("جاري جلب معلومات البلد..."):
@@ -88,8 +89,9 @@ if st.session_state.specs:
                     st.metric("البلد", destination_coords['country_info']['country'])
                     st.metric("العملة", f"{destination_coords['country_info']['currency']['name']} ({destination_coords['country_info']['currency']['symbol']})")
                 with col2:
-                    st.metric("سعر الوقود (محلي)", f"{destination_coords['country_info']['fuel_price']['local']} {destination_coords['country_info']['currency']['symbol']}")
-                    st.metric("سعر الوقود (دولار)", f"{destination_coords['country_info']['fuel_price']['usd']} $")
+                    st.metric("سعر البنزين 95", f"{destination_coords['country_info']['fuel_prices']['95']} {destination_coords['country_info']['currency']['symbol']}")
+                    st.metric("سعر البنزين 91", f"{destination_coords['country_info']['fuel_prices']['91']} {destination_coords['country_info']['currency']['symbol']}")
+                    st.metric("سعر الديزل", f"{destination_coords['country_info']['fuel_prices']['diesel']} {destination_coords['country_info']['currency']['symbol']}")
     
     if st.button("احسب المسارات"):
         if origin and destination:
@@ -110,10 +112,15 @@ if st.session_state.specs:
                         # استخراج معدل استهلاك الوقود
                         fuel_consumption = extract_fuel_consumption(st.session_state.specs['specifications'])
                         
-                        # استخدام سعر الوقود من البلد الأصلي
+                        # استخدام سعر الوقود المناسب حسب النوع المختار
                         fuel_price = 2.18  # سعر افتراضي
-                        if st.session_state.origin_country_info and 'fuel_price' in st.session_state.origin_country_info:
-                            fuel_price = st.session_state.origin_country_info['fuel_price']['local']
+                        if st.session_state.origin_country_info and 'fuel_prices' in st.session_state.origin_country_info:
+                            if fuel_type == "بنزين 95":
+                                fuel_price = st.session_state.origin_country_info['fuel_prices']['95']
+                            elif fuel_type == "بنزين 91":
+                                fuel_price = st.session_state.origin_country_info['fuel_prices']['91']
+                            else:  # ديزل
+                                fuel_price = st.session_state.origin_country_info['fuel_prices']['diesel']
                         
                         # عرض النتائج
                         st.header("نتائج الرحلة")

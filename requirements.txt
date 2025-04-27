@@ -1,5 +1,10 @@
 streamlit==1.32.0
 google-generativeai==0.3.2
 geopy==2.4.1
+<<<<<<< HEAD
 openrouteservice==2.3.3
 python-dotenv==1.0.1 
+=======
+openrouteservice==2.3.3  # تغيير من 2.4.0 إلى آخر إصدار متوفر
+python-dotenv==1.0.1
+>>>>>>> 553cb8b0f19012c15a8b748105b01dc53513ff39
