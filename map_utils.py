@@ -25,9 +25,12 @@ def create_map(origin_coords: dict, destination_coords: dict, routes: list) -> f
     
     # إضافة المسارات
     for i, route in enumerate(routes):
+        # تحويل إحداثيات المسار من [longitude, latitude] إلى [latitude, longitude]
+        route_coords = [[coord[1], coord[0]] for coord in route['geometry']]
+        
         # إضافة خط أزرق رئيسي للمسار
         folium.PolyLine(
-            route['geometry'],
+            route_coords,
             color='blue',
             weight=6,
             opacity=0.8,
@@ -36,7 +39,7 @@ def create_map(origin_coords: dict, destination_coords: dict, routes: list) -> f
         
         # إضافة خط أبيض داخلي للمسار لتحسين المظهر
         folium.PolyLine(
-            route['geometry'],
+            route_coords,
             color='white',
             weight=4,
             opacity=0.5
