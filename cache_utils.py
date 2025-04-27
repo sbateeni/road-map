@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 from datetime import datetime, timedelta
-from config import CACHE_EXPIRY_DAYS
+from config import CACHE_EXPIRY
 
 # Cache directories
 CACHE_DIR = Path("cache")
