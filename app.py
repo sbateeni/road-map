@@ -125,7 +125,7 @@ if st.session_state.specs:
                     
                     if routes:
                         # استخراج معدل استهلاك الوقود
-                        fuel_consumption = extract_fuel_consumption(st.session_state.specs['specifications'])
+                        fuel_consumption = extract_fuel_consumption(st.session_state.specs)
                         
                         # استخدام سعر الوقود المناسب حسب النوع المختار
                         if st.session_state.origin_country_info and 'fuel_prices' in st.session_state.origin_country_info:
@@ -163,9 +163,10 @@ if st.session_state.specs:
                                 
                                 # عرض تفاصيل الحساب
                                 st.subheader("تفاصيل الحساب")
-                                st.write(f"معدل استهلاك الوقود: {fuel_consumption} لتر/100 كم")
+                                st.write(f"معدل استهلاك الوقود: {fuel_cost['consumption_rate']} لتر/100 كم")
+                                st.write(f"كفاءة استهلاك الوقود: {fuel_cost['efficiency']} كم/لتر")
                                 st.write(f"سعر الوقود: {fuel_price} {currency_symbol}/لتر")
-                                st.write(f"كمية الوقود المطلوبة: {fuel_cost['fuel_amount']} لتر")
+                                st.write(f"كمية الوقود المطلوبة: {fuel_cost['fuel_needed_liters']} لتر")
                                 st.write(f"تكلفة الوقود: {fuel_cost['total_cost']} {currency_symbol}")
                                 st.write(f"نوع الوقود: {fuel_type}")
                         else:
