@@ -142,23 +142,14 @@ if st.session_state.specs:
                             with col2:
                                 st.metric("الوقت", f"{route['duration']} دقيقة")
                             with col3:
-                                st.metric("تكلفة الوقود", f"{fuel_cost['total_cost']} {st.session_state.origin_country_info['currency']['symbol'] if st.session_state.origin_country_info else 'ريال'}")
+                                st.metric("تكلفة الوقود", f"{fuel_cost['total_cost']} {st.session_state.origin_country_info['currency']['symbol']}")
                             
-                            st.metric("كمية الوقود", f"{fuel_cost['fuel_amount']} لتر")
-                            st.metric("نوع الوقود", fuel_type)
-                            
-                            # إذا كان البلد الهدف مختلف، عرض التكلفة بالعملة المحلية للبلد الهدف
-                            if st.session_state.destination_country_info and st.session_state.origin_country_info:
-                                if st.session_state.destination_country_info['currency']['code'] != st.session_state.origin_country_info['currency']['code']:
-                                    converted_cost = convert_currency(
-                                        fuel_cost['total_cost'],
-                                        st.session_state.origin_country_info['currency']['code'],
-                                        st.session_state.destination_country_info['currency']['code']
-                                    )
-                                    st.metric(
-                                        f"تكلفة الوقود ({st.session_state.destination_country_info['country']})",
-                                        f"{round(converted_cost, 2)} {st.session_state.destination_country_info['currency']['symbol']}"
-                                    )
+                            # عرض تفاصيل الحساب
+                            st.subheader("تفاصيل الحساب")
+                            st.write(f"معدل استهلاك الوقود: {fuel_consumption} لتر/100 كم")
+                            st.write(f"سعر الوقود: {fuel_price} {st.session_state.origin_country_info['currency']['symbol']}/لتر")
+                            st.write(f"كمية الوقود المطلوبة: {fuel_cost['fuel_amount']} لتر")
+                            st.write(f"نوع الوقود: {fuel_type}")
                     else:
                         st.error("لم يتم العثور على المسارات")
                 else:
