@@ -76,6 +76,9 @@ if st.session_state.specs:
                     st.metric("سعر البنزين 95", f"{origin_coords['country_info']['fuel_prices']['95']} {origin_coords['country_info']['currency']['symbol']}")
                     st.metric("سعر البنزين 91", f"{origin_coords['country_info']['fuel_prices']['91']} {origin_coords['country_info']['currency']['symbol']}")
                     st.metric("سعر الديزل", f"{origin_coords['country_info']['fuel_prices']['diesel']} {origin_coords['country_info']['currency']['symbol']}")
+            else:
+                st.error("لم يتم العثور على معلومات البلد")
+                st.session_state.origin_country_info = None
     
     if destination:
         with st.spinner("جاري جلب معلومات البلد..."):
@@ -93,6 +96,9 @@ if st.session_state.specs:
                     st.metric("سعر البنزين 95", f"{destination_coords['country_info']['fuel_prices']['95']} {destination_coords['country_info']['currency']['symbol']}")
                     st.metric("سعر البنزين 91", f"{destination_coords['country_info']['fuel_prices']['91']} {destination_coords['country_info']['currency']['symbol']}")
                     st.metric("سعر الديزل", f"{destination_coords['country_info']['fuel_prices']['diesel']} {destination_coords['country_info']['currency']['symbol']}")
+            else:
+                st.error("لم يتم العثور على معلومات البلد")
+                st.session_state.destination_country_info = None
     
     if st.button("احسب المسارات"):
         if origin and destination:
