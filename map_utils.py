@@ -24,14 +24,22 @@ def create_map(origin_coords: dict, destination_coords: dict, routes: list) -> f
     ).add_to(m)
     
     # إضافة المسارات
-    colors = ['blue', 'purple', 'orange', 'darkred', 'lightred']
     for i, route in enumerate(routes):
+        # إضافة خط أزرق رئيسي للمسار
         folium.PolyLine(
             route['geometry'],
-            color=colors[i % len(colors)],
-            weight=5,
+            color='blue',
+            weight=6,
             opacity=0.8,
             popup=f"المسار {i+1}: {route['distance']} كم"
+        ).add_to(m)
+        
+        # إضافة خط أبيض داخلي للمسار لتحسين المظهر
+        folium.PolyLine(
+            route['geometry'],
+            color='white',
+            weight=4,
+            opacity=0.5
         ).add_to(m)
     
     return m
