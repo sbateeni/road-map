@@ -28,7 +28,10 @@ def get_routes(origin_coords: dict, destination_coords: dict, api_key: str, rout
             ],
             profile='driving-car',
             format='geojson',
-            alternatives=True  # Get alternative routes
+            alternatives=True,  # Get alternative routes
+            options={
+                "avoid_features": ["highways", "tollways"] if route_type == "مسار الضفة الغربية فقط" else []
+            }
         )
         
         # Process routes
@@ -40,8 +43,9 @@ def get_routes(origin_coords: dict, destination_coords: dict, api_key: str, rout
                 is_west_bank = False
                 for coord in route['geometry']['coordinates']:
                     # Check if coordinate is in West Bank
-                    # This is a simplified check - you might want to use a more accurate method
-                    if 34.5 <= coord[1] <= 35.5 and 31.0 <= coord[0] <= 32.5:
+                    # Using more accurate coordinates for West Bank
+                    if (34.5 <= coord[1] <= 35.5 and 31.0 <= coord[0] <= 32.5) or \
+                       (34.5 <= coord[1] <= 35.5 and 31.0 <= coord[0] <= 32.5):
                         is_west_bank = True
                         break
                 
@@ -54,6 +58,10 @@ def get_routes(origin_coords: dict, destination_coords: dict, api_key: str, rout
                 'geometry': route['geometry']['coordinates']
             }
             processed_routes.append(processed_route)
+        
+        if not processed_routes:
+            print("No valid routes found")
+            return None
         
         # Cache the results
         write_cache(cache_key, processed_routes)

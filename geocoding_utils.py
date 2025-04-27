@@ -55,7 +55,12 @@ def get_country_info(latitude: float, longitude: float) -> dict:
             "diesel": float,
             "usd": float
         }}
-    }}"""
+    }}
+    
+    ملاحظات مهمة:
+    - يجب أن تكون جميع أسعار الوقود أرقاماً (float)
+    - إذا كان سعر معين غير متوفر، استخدم 0.0
+    - تأكد من أن جميع الحقول موجودة في الاستجابة"""
     
     # Get response from Gemini
     response = gemini_model.generate_content(prompt)
@@ -64,6 +69,18 @@ def get_country_info(latitude: float, longitude: float) -> dict:
     try:
         # Try to parse the response as JSON
         country_info = json.loads(response.text)
+        
+        # Ensure all fuel prices are numbers
+        if 'fuel_prices' in country_info:
+            for fuel_type in ['95', '91', 'diesel', 'usd']:
+                if fuel_type not in country_info['fuel_prices'] or country_info['fuel_prices'][fuel_type] is None:
+                    country_info['fuel_prices'][fuel_type] = 0.0
+                else:
+                    try:
+                        country_info['fuel_prices'][fuel_type] = float(country_info['fuel_prices'][fuel_type])
+                    except (ValueError, TypeError):
+                        country_info['fuel_prices'][fuel_type] = 0.0
+        
         write_cache(cache_key, country_info)
         return country_info
     except json.JSONDecodeError:
@@ -75,6 +92,18 @@ def get_country_info(latitude: float, longitude: float) -> dict:
             if start_idx >= 0 and end_idx > start_idx:
                 json_str = response.text[start_idx:end_idx]
                 country_info = json.loads(json_str)
+                
+                # Ensure all fuel prices are numbers
+                if 'fuel_prices' in country_info:
+                    for fuel_type in ['95', '91', 'diesel', 'usd']:
+                        if fuel_type not in country_info['fuel_prices'] or country_info['fuel_prices'][fuel_type] is None:
+                            country_info['fuel_prices'][fuel_type] = 0.0
+                        else:
+                            try:
+                                country_info['fuel_prices'][fuel_type] = float(country_info['fuel_prices'][fuel_type])
+                            except (ValueError, TypeError):
+                                country_info['fuel_prices'][fuel_type] = 0.0
+                
                 write_cache(cache_key, country_info)
                 return country_info
         except:
