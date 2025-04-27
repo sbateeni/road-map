@@ -1,7 +1,9 @@
 streamlit==1.32.0
-google-generativeai==0.3.2
 geopy==2.4.1
-openrouteservice==2.3.3
+openrouteservice==2.4.0
+google-generativeai==0.3.2
 python-dotenv==1.0.1
-folium==0.15.1
+beautifulsoup4==4.12.3
+requests==2.31.0
+folium==0.15.2
 streamlit-folium==0.15.1
