@@ -145,12 +145,13 @@ if st.session_state.specs:
                             with col2:
                                 st.metric("الوقت", f"{route['duration']} دقيقة")
                             with col3:
-                                st.metric("تكلفة الوقود", f"{fuel_cost['total_cost']} {st.session_state.origin_country_info['currency']['symbol']}")
+                                currency_symbol = st.session_state.origin_country_info.get('currency', {}).get('symbol', '₪') if st.session_state.origin_country_info else '₪'
+                                st.metric("تكلفة الوقود", f"{fuel_cost['total_cost']} {currency_symbol}")
                             
                             # عرض تفاصيل الحساب
                             st.subheader("تفاصيل الحساب")
                             st.write(f"معدل استهلاك الوقود: {fuel_consumption} لتر/100 كم")
-                            st.write(f"سعر الوقود: {fuel_price} {st.session_state.origin_country_info['currency']['symbol']}/لتر")
+                            st.write(f"سعر الوقود: {fuel_price} {currency_symbol}/لتر")
                             st.write(f"كمية الوقود المطلوبة: {fuel_cost['fuel_amount']} لتر")
                             st.write(f"نوع الوقود: {fuel_type}")
                     else:
