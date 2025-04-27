@@ -6,6 +6,7 @@ import google.generativeai as genai
 import json
 import os
 from dotenv import load_dotenv
+from fuel_prices import get_fuel_prices
 
 # تحميل المتغيرات البيئية
 load_dotenv()
@@ -35,11 +36,6 @@ def get_country_info(latitude: float, longitude: float) -> dict:
     يجب أن تتضمن المعلومات:
     - اسم البلد
     - العملة المستخدمة
-    - أسعار الوقود المختلفة:
-      * بنزين 95
-      * بنزين 91
-      * ديزل
-    - سعر الوقود بالدولار الأمريكي
     
     قم بتنسيق الاستجابة ككائن JSON بالهيكل التالي:
     {{
@@ -48,19 +44,8 @@ def get_country_info(latitude: float, longitude: float) -> dict:
             "name": string,
             "code": string,
             "symbol": string
-        }},
-        "fuel_prices": {{
-            "95": float,
-            "91": float,
-            "diesel": float,
-            "usd": float
         }}
-    }}
-    
-    ملاحظات مهمة:
-    - يجب أن تكون جميع أسعار الوقود أرقاماً (float)
-    - إذا كان سعر معين غير متوفر، استخدم 0.0
-    - تأكد من أن جميع الحقول موجودة في الاستجابة"""
+    }}"""
     
     # Get response from Gemini
     response = gemini_model.generate_content(prompt)
@@ -70,16 +55,16 @@ def get_country_info(latitude: float, longitude: float) -> dict:
         # Try to parse the response as JSON
         country_info = json.loads(response.text)
         
-        # Ensure all fuel prices are numbers
-        if 'fuel_prices' in country_info:
-            for fuel_type in ['95', '91', 'diesel', 'usd']:
-                if fuel_type not in country_info['fuel_prices'] or country_info['fuel_prices'][fuel_type] is None:
-                    country_info['fuel_prices'][fuel_type] = 0.0
-                else:
-                    try:
-                        country_info['fuel_prices'][fuel_type] = float(country_info['fuel_prices'][fuel_type])
-                    except (ValueError, TypeError):
-                        country_info['fuel_prices'][fuel_type] = 0.0
+        # Get real-time fuel prices
+        fuel_prices = get_fuel_prices(country_info['country'])
+        if fuel_prices:
+            country_info['fuel_prices'] = fuel_prices
+        else:
+            country_info['fuel_prices'] = {
+                '95': 0.0,
+                '91': 0.0,
+                'diesel': 0.0
+            }
         
         write_cache(cache_key, country_info)
         return country_info
@@ -93,16 +78,16 @@ def get_country_info(latitude: float, longitude: float) -> dict:
                 json_str = response.text[start_idx:end_idx]
                 country_info = json.loads(json_str)
                 
-                # Ensure all fuel prices are numbers
-                if 'fuel_prices' in country_info:
-                    for fuel_type in ['95', '91', 'diesel', 'usd']:
-                        if fuel_type not in country_info['fuel_prices'] or country_info['fuel_prices'][fuel_type] is None:
-                            country_info['fuel_prices'][fuel_type] = 0.0
-                        else:
-                            try:
-                                country_info['fuel_prices'][fuel_type] = float(country_info['fuel_prices'][fuel_type])
-                            except (ValueError, TypeError):
-                                country_info['fuel_prices'][fuel_type] = 0.0
+                # Get real-time fuel prices
+                fuel_prices = get_fuel_prices(country_info['country'])
+                if fuel_prices:
+                    country_info['fuel_prices'] = fuel_prices
+                else:
+                    country_info['fuel_prices'] = {
+                        '95': 0.0,
+                        '91': 0.0,
+                        'diesel': 0.0
+                    }
                 
                 write_cache(cache_key, country_info)
                 return country_info
