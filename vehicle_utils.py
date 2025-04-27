@@ -15,14 +15,6 @@ def get_vehicle_cache_key(brand: str, model: str, year: int) -> str:
 
 def get_vehicle_specs(brand: str, model: str, year: int, api_key: str) -> dict:
     """Get vehicle specifications using Gemini API"""
-    cache_key = get_vehicle_cache_key(brand, model, year)
-    
-    # Check cache first
-    cached_data = read_cache(cache_key)
-    if cached_data:
-        logger.info(f"Retrieved vehicle specs from cache for {brand} {model} {year}")
-        return cached_data
-    
     try:
         # Configure Gemini API
         logger.info("Configuring Gemini API...")
@@ -83,13 +75,11 @@ def get_vehicle_specs(brand: str, model: str, year: int, api_key: str) -> dict:
             logger.error("Received empty response from Gemini")
             return None
         
-        # Parse and store response
+        # Parse response
         try:
             # Try to parse the response as JSON
             logger.info("Parsing response as JSON...")
             specs = json.loads(response.text)
-            write_cache(cache_key, specs)
-            logger.info(f"Successfully cached vehicle specs for {brand} {model} {year}")
             return specs
         except json.JSONDecodeError:
             # If parsing fails, try to extract JSON from the text
@@ -101,8 +91,6 @@ def get_vehicle_specs(brand: str, model: str, year: int, api_key: str) -> dict:
                 if start_idx >= 0 and end_idx > start_idx:
                     json_str = response.text[start_idx:end_idx]
                     specs = json.loads(json_str)
-                    write_cache(cache_key, specs)
-                    logger.info(f"Successfully extracted and cached vehicle specs for {brand} {model} {year}")
                     return specs
             except Exception as e:
                 logger.error(f"Failed to extract JSON from response: {e}")
