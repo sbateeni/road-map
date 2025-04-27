@@ -59,6 +59,13 @@ if st.session_state.specs:
     origin = st.text_input("من")
     destination = st.text_input("إلى")
     
+    # إضافة اختيار نوع المسار
+    route_type = st.selectbox(
+        "نوع المسار",
+        ["أقصر مسار", "مسار الضفة الغربية فقط"],
+        help="اختر نوع المسار المفضل"
+    )
+    
     # عرض معلومات البلد إذا تم إدخال العنوان
     if origin:
         with st.spinner("جاري جلب معلومات البلد..."):
@@ -112,7 +119,8 @@ if st.session_state.specs:
                     routes = get_routes(
                         origin_coords,
                         destination_coords,
-                        os.getenv("OPENROUTE_API_KEY")
+                        os.getenv("OPENROUTE_API_KEY"),
+                        route_type=route_type
                     )
                     
                     if routes:
@@ -158,6 +166,7 @@ if st.session_state.specs:
                                 st.write(f"معدل استهلاك الوقود: {fuel_consumption} لتر/100 كم")
                                 st.write(f"سعر الوقود: {fuel_price} {currency_symbol}/لتر")
                                 st.write(f"كمية الوقود المطلوبة: {fuel_cost['fuel_amount']} لتر")
+                                st.write(f"تكلفة الوقود: {fuel_cost['total_cost']} {currency_symbol}")
                                 st.write(f"نوع الوقود: {fuel_type}")
                         else:
                             st.error("لم يتم العثور على أسعار الوقود للبلد المحدد")

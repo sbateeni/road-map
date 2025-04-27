@@ -7,7 +7,7 @@ from geocoding_utils import get_coordinates
 # Configure OpenRouteService client
 client = openrouteservice.Client(key=OPENROUTE_API_KEY)
 
-def get_routes(origin_coords: dict, destination_coords: dict, api_key: str) -> list:
+def get_routes(origin_coords: dict, destination_coords: dict, api_key: str, route_type: str = "أقصر مسار") -> list:
     """Get routes between two points using OpenRouteService"""
     cache_key = get_route_cache_key(origin_coords, destination_coords)
     
@@ -27,12 +27,27 @@ def get_routes(origin_coords: dict, destination_coords: dict, api_key: str) -> l
                 [destination_coords['longitude'], destination_coords['latitude']]
             ],
             profile='driving-car',
-            format='geojson'
+            format='geojson',
+            alternatives=True  # Get alternative routes
         )
         
         # Process routes
         processed_routes = []
         for route in routes['features']:
+            # Check if route is in West Bank if required
+            if route_type == "مسار الضفة الغربية فقط":
+                # Check if route passes through West Bank
+                is_west_bank = False
+                for coord in route['geometry']['coordinates']:
+                    # Check if coordinate is in West Bank
+                    # This is a simplified check - you might want to use a more accurate method
+                    if 34.5 <= coord[1] <= 35.5 and 31.0 <= coord[0] <= 32.5:
+                        is_west_bank = True
+                        break
+                
+                if not is_west_bank:
+                    continue
+            
             processed_route = {
                 'distance': route['properties']['segments'][0]['distance'] / 1000,  # Convert to km
                 'duration': route['properties']['segments'][0]['duration'] / 60,  # Convert to minutes
