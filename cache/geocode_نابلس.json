@@ -1,0 +1,17 @@
+{
+  "latitude": 32.2205316,
+  "longitude": 35.2569374,
+  "address": "نابلس, منطقة أ, الضفة الغربية, Palestinian Territory",
+  "country_info": {
+    "country": "فلسطين",
+    "currency": {
+      "name": "الشيكل الإسرائيلي الجديد",
+      "code": "ILS",
+      "symbol": "₪"
+    },
+    "fuel_price": {
+      "local": 7.74,
+      "usd": 2.09
+    }
+  }
+}
