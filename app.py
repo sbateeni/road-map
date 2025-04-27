@@ -5,12 +5,15 @@ from vehicle_utils import get_vehicle_specs
 from geocoding_utils import get_coordinates
 from routing_utils import get_routes
 from fuel_calculator import calculate_fuel_cost, extract_fuel_consumption, convert_currency
+import folium
+from streamlit_folium import folium_static
+import json
 
 # تحميل المتغيرات البيئية
 load_dotenv()
 
 # تكوين الصفحة
-st.set_page_config(page_title="حاسبة تكلفة الرحلة", page_icon="🚗")
+st.set_page_config(page_title="حاسبة تكلفة الرحلة", page_icon="🚗", layout="wide")
 
 # العنوان
 st.title("حاسبة تكلفة الرحلة 🚗")
@@ -125,9 +128,28 @@ if st.session_state.specs:
                         # عرض النتائج
                         st.header("نتائج الرحلة")
                         
-                        for i, route in enumerate(routes, 1):
-                            st.subheader(f"المسار {i}")
-                            
+                        # إنشاء خريطة
+                        m = folium.Map(
+                            location=[origin_coords['latitude'], origin_coords['longitude']],
+                            zoom_start=10
+                        )
+                        
+                        # إضافة علامات للنقاط
+                        folium.Marker(
+                            [origin_coords['latitude'], origin_coords['longitude']],
+                            popup=origin,
+                            icon=folium.Icon(color='green', icon='info-sign')
+                        ).add_to(m)
+                        
+                        folium.Marker(
+                            [destination_coords['latitude'], destination_coords['longitude']],
+                            popup=destination,
+                            icon=folium.Icon(color='red', icon='info-sign')
+                        ).add_to(m)
+                        
+                        # إضافة المسارات
+                        colors = ['blue', 'purple', 'orange', 'darkred', 'lightred']
+                        for i, route in enumerate(routes):
                             # حساب تكلفة الوقود
                             fuel_cost = calculate_fuel_cost(
                                 route['distance'],
@@ -150,6 +172,19 @@ if st.session_state.specs:
                             st.write(f"سعر الوقود: {fuel_price} {st.session_state.origin_country_info['currency']['symbol']}/لتر")
                             st.write(f"كمية الوقود المطلوبة: {fuel_cost['fuel_amount']} لتر")
                             st.write(f"نوع الوقود: {fuel_type}")
+                            
+                            # إضافة المسار إلى الخريطة
+                            folium.PolyLine(
+                                route['geometry'],
+                                color=colors[i % len(colors)],
+                                weight=5,
+                                opacity=0.8,
+                                popup=f"المسار {i+1}: {route['distance']} كم"
+                            ).add_to(m)
+                        
+                        # عرض الخريطة
+                        st.subheader("خريطة المسار")
+                        folium_static(m)
                     else:
                         st.error("لم يتم العثور على المسارات")
                 else:

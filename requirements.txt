@@ -3,3 +3,5 @@ google-generativeai==0.3.2
 geopy==2.4.1
 openrouteservice==2.3.3
 python-dotenv==1.0.1
+folium==0.15.1
+streamlit-folium==0.15.1
