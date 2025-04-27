@@ -112,24 +112,6 @@ def get_coordinates(address: str) -> dict:
             country_info = get_country_info(location.latitude, location.longitude)
             if country_info:
                 coords["country_info"] = country_info
-            else:
-                # إذا لم يتم العثور على معلومات البلد، استخدم معلومات افتراضية لفلسطين
-                # (في حالة المدن الفلسطينية)
-                if "Palestine" in location.address or "West Bank" in location.address:
-                    coords["country_info"] = {
-                        "country": "فلسطين",
-                        "currency": {
-                            "name": "شيكل إسرائيلي",
-                            "code": "ILS",
-                            "symbol": "₪"
-                        },
-                        "fuel_prices": {
-                            "95": 7.5,  # سعر افتراضي للبنزين 95 في فلسطين
-                            "91": 6.5,  # سعر افتراضي للبنزين 91 في فلسطين
-                            "diesel": 5.5,  # سعر افتراضي للديزل في فلسطين
-                            "usd": 2.0     # سعر افتراضي بالدولار
-                        }
-                    }
             
             write_cache(cache_key, coords)
             return coords
