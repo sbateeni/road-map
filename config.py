@@ -9,7 +9,7 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 OPENROUTE_API_KEY = os.getenv('OPENROUTE_API_KEY')
 
 # إعدادات التخزين المؤقت
-CACHE_DIR = 'cache'
+CACHE_DIR = '/tmp/cache'  # استخدام مجلد مؤقت في Streamlit Cloud
 VEHICLE_CACHE_DIR = os.path.join(CACHE_DIR, 'vehicles')
 GEOCODE_CACHE_DIR = os.path.join(CACHE_DIR, 'geocode')
 ROUTE_CACHE_DIR = os.path.join(CACHE_DIR, 'routes')
@@ -25,9 +25,8 @@ for dir_path in [CACHE_DIR, VEHICLE_CACHE_DIR, GEOCODE_CACHE_DIR, ROUTE_CACHE_DI
 DEFAULT_FUEL_PRICE = 2.18
 
 # Cache settings
-CACHE_EXPIRY_DAYS = 30  # Cache expiry in days
+CACHE_EXPIRY = 3600  # 1 hour in seconds
 CACHE_ENABLED = True
-CACHE_EXPIRY = 24 * 60 * 60  # 24 hours in seconds
 
 # API endpoints
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
