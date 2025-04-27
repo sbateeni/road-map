@@ -44,8 +44,7 @@ def get_routes(origin_coords: dict, destination_coords: dict, api_key: str, rout
                 for coord in route['geometry']['coordinates']:
                     # Check if coordinate is in West Bank
                     # Using more accurate coordinates for West Bank
-                    if (34.5 <= coord[1] <= 35.5 and 31.0 <= coord[0] <= 32.5) or \
-                       (34.5 <= coord[1] <= 35.5 and 31.0 <= coord[0] <= 32.5):
+                    if (34.5 <= coord[1] <= 35.5 and 31.0 <= coord[0] <= 32.5):
                         is_west_bank = True
                         break
                 
