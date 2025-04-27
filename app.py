@@ -114,7 +114,6 @@ if st.session_state.specs:
                         fuel_consumption = extract_fuel_consumption(st.session_state.specs['specifications'])
                         
                         # استخدام سعر الوقود المناسب حسب النوع المختار
-                        fuel_price = 2.18  # سعر افتراضي
                         if st.session_state.origin_country_info and 'fuel_prices' in st.session_state.origin_country_info:
                             if fuel_type == "بنزين 95":
                                 fuel_price = st.session_state.origin_country_info['fuel_prices']['95']
@@ -122,38 +121,40 @@ if st.session_state.specs:
                                 fuel_price = st.session_state.origin_country_info['fuel_prices']['91']
                             else:  # ديزل
                                 fuel_price = st.session_state.origin_country_info['fuel_prices']['diesel']
-                        
-                        # عرض النتائج
-                        st.header("نتائج الرحلة")
-                        
-                        # إنشاء وعرض الخريطة
-                        m = create_map(origin_coords, destination_coords, routes)
-                        display_map(m)
-                        
-                        for i, route in enumerate(routes):
-                            # حساب تكلفة الوقود
-                            fuel_cost = calculate_fuel_cost(
-                                route['distance'],
-                                fuel_consumption,
-                                fuel_price
-                            )
                             
-                            # عرض المعلومات
-                            col1, col2, col3 = st.columns(3)
-                            with col1:
-                                st.metric("المسافة", f"{route['distance']} كم")
-                            with col2:
-                                st.metric("الوقت", f"{route['duration']} دقيقة")
-                            with col3:
-                                currency_symbol = st.session_state.origin_country_info.get('currency', {}).get('symbol', '₪') if st.session_state.origin_country_info else '₪'
-                                st.metric("تكلفة الوقود", f"{fuel_cost['total_cost']} {currency_symbol}")
+                            # عرض النتائج
+                            st.header("نتائج الرحلة")
                             
-                            # عرض تفاصيل الحساب
-                            st.subheader("تفاصيل الحساب")
-                            st.write(f"معدل استهلاك الوقود: {fuel_consumption} لتر/100 كم")
-                            st.write(f"سعر الوقود: {fuel_price} {currency_symbol}/لتر")
-                            st.write(f"كمية الوقود المطلوبة: {fuel_cost['fuel_amount']} لتر")
-                            st.write(f"نوع الوقود: {fuel_type}")
+                            # إنشاء وعرض الخريطة
+                            m = create_map(origin_coords, destination_coords, routes)
+                            display_map(m)
+                            
+                            for i, route in enumerate(routes):
+                                # حساب تكلفة الوقود
+                                fuel_cost = calculate_fuel_cost(
+                                    route['distance'],
+                                    fuel_consumption,
+                                    fuel_price
+                                )
+                                
+                                # عرض المعلومات
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.metric("المسافة", f"{route['distance']} كم")
+                                with col2:
+                                    st.metric("الوقت", f"{route['duration']} دقيقة")
+                                with col3:
+                                    currency_symbol = st.session_state.origin_country_info.get('currency', {}).get('symbol', '₪') if st.session_state.origin_country_info else '₪'
+                                    st.metric("تكلفة الوقود", f"{fuel_cost['total_cost']} {currency_symbol}")
+                                
+                                # عرض تفاصيل الحساب
+                                st.subheader("تفاصيل الحساب")
+                                st.write(f"معدل استهلاك الوقود: {fuel_consumption} لتر/100 كم")
+                                st.write(f"سعر الوقود: {fuel_price} {currency_symbol}/لتر")
+                                st.write(f"كمية الوقود المطلوبة: {fuel_cost['fuel_amount']} لتر")
+                                st.write(f"نوع الوقود: {fuel_type}")
+                        else:
+                            st.error("لم يتم العثور على أسعار الوقود للبلد المحدد")
                     else:
                         st.error("لم يتم العثور على المسارات")
                 else:
