@@ -445,15 +445,20 @@ def get_route(start_coords: dict, end_coords: dict) -> dict:
             'Content-Type': 'application/json'
         }
 
-        # Validate coordinates
+        # Validate and extract coordinates
         try:
-            start_lat = float(start_coords['latitude'])
-            start_lon = float(start_coords['longitude'])
-            end_lat = float(end_coords['latitude'])
-            end_lon = float(end_coords['longitude'])
+            # Extract coordinates from the dictionary
+            start_lat = float(start_coords.get('latitude', 0))
+            start_lon = float(start_coords.get('longitude', 0))
+            end_lat = float(end_coords.get('latitude', 0))
+            end_lon = float(end_coords.get('longitude', 0))
+            
+            # Validate coordinates
+            if not all(isinstance(x, (int, float)) for x in [start_lat, start_lon, end_lat, end_lon]):
+                raise ValueError("Invalid coordinate values")
             
             logger.info(f"Calculating route from ({start_lat}, {start_lon}) to ({end_lat}, {end_lon})")
-        except (KeyError, ValueError) as e:
+        except (KeyError, ValueError, TypeError) as e:
             logger.error(f"Invalid coordinates format: {e}")
             logger.error(f"Start coordinates: {start_coords}")
             logger.error(f"End coordinates: {end_coords}")
