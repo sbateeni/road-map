@@ -4,6 +4,7 @@ import logging
 from config import GEMINI_API_KEY, VEHICLE_CACHE_DIR
 from cache_utils import read_cache, write_cache, get_vehicle_cache_key
 from typing import Dict, Optional, List
+import re
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -12,6 +13,28 @@ logger = logging.getLogger(__name__)
 def get_vehicle_cache_key(brand: str, model: str, year: int) -> str:
     """Generate cache key for vehicle data"""
     return f"{brand.lower()}_{model.lower()}_{year}"
+
+def clean_json_response(text: str) -> str:
+    """Clean and format JSON response from Gemini API"""
+    # Remove any markdown code block markers
+    text = re.sub(r'```json\s*', '', text)
+    text = re.sub(r'```\s*', '', text)
+    
+    # Remove any leading/trailing whitespace
+    text = text.strip()
+    
+    # If the response is wrapped in a code block, extract just the JSON
+    if text.startswith('{') and text.endswith('}'):
+        return text
+    elif text.startswith('[') and text.endswith(']'):
+        return text
+    
+    # Try to find JSON-like structure
+    json_match = re.search(r'(\{.*\}|\[.*\])', text, re.DOTALL)
+    if json_match:
+        return json_match.group(1)
+    
+    return text
 
 def get_vehicle_models(brand: str, api_key: str) -> List[str]:
     """Get list of models for a specific brand using Gemini API"""
@@ -27,7 +50,7 @@ def get_vehicle_models(brand: str, api_key: str) -> List[str]:
         # Create prompt
         prompt = f"""
         Please provide a list of car models for the brand {brand}.
-        Return the results as a JSON array of strings.
+        Return ONLY a JSON array of strings, nothing else.
         Example: ["Model 1", "Model 2", "Model 3"]
         """
         
@@ -39,27 +62,19 @@ def get_vehicle_models(brand: str, api_key: str) -> List[str]:
             logger.error("Received empty response from Gemini")
             return []
         
-        # Parse response
+        # Clean and parse response
         try:
-            # Try to parse the response as JSON
-            logger.info("Parsing response as JSON...")
-            models = json.loads(response.text)
-            return models
-        except json.JSONDecodeError:
-            # If parsing fails, try to extract JSON from the text
-            logger.warning("Failed to parse response as JSON, attempting to extract JSON structure...")
-            try:
-                # Find JSON-like structure in the text
-                start_idx = response.text.find('[')
-                end_idx = response.text.rfind(']') + 1
-                if start_idx >= 0 and end_idx > start_idx:
-                    json_str = response.text[start_idx:end_idx]
-                    models = json.loads(json_str)
-                    return models
-            except Exception as e:
-                logger.error(f"Failed to extract JSON from response: {e}")
-                logger.error(f"Response text: {response.text}")
+            cleaned_text = clean_json_response(response.text)
+            models = json.loads(cleaned_text)
+            if isinstance(models, list):
+                return models
+            else:
+                logger.error(f"Expected list but got {type(models)}")
                 return []
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON: {e}")
+            logger.error(f"Response text: {response.text}")
+            return []
     except Exception as e:
         logger.error(f"Error getting vehicle models: {e}")
         return []
@@ -116,7 +131,10 @@ def get_vehicle_specs(brand: str, model: str, year: int, api_key: str) -> dict:
                     "weight": string
                 }}
             }}
-        }}"""
+        }}
+        
+        تأكد من أن الاستجابة تحتوي على كائن JSON فقط، بدون أي نص إضافي.
+        """
         
         # Get response from Gemini
         logger.info(f"Sending prompt to Gemini for {brand} {model} {year}...")
@@ -126,27 +144,19 @@ def get_vehicle_specs(brand: str, model: str, year: int, api_key: str) -> dict:
             logger.error("Received empty response from Gemini")
             return None
         
-        # Parse response
+        # Clean and parse response
         try:
-            # Try to parse the response as JSON
-            logger.info("Parsing response as JSON...")
-            specs = json.loads(response.text)
-            return specs
-        except json.JSONDecodeError:
-            # If parsing fails, try to extract JSON from the text
-            logger.warning("Failed to parse response as JSON, attempting to extract JSON structure...")
-            try:
-                # Find JSON-like structure in the text
-                start_idx = response.text.find('{')
-                end_idx = response.text.rfind('}') + 1
-                if start_idx >= 0 and end_idx > start_idx:
-                    json_str = response.text[start_idx:end_idx]
-                    specs = json.loads(json_str)
-                    return specs
-            except Exception as e:
-                logger.error(f"Failed to extract JSON from response: {e}")
-                logger.error(f"Response text: {response.text}")
+            cleaned_text = clean_json_response(response.text)
+            specs = json.loads(cleaned_text)
+            if isinstance(specs, dict) and 'specifications' in specs:
+                return specs
+            else:
+                logger.error(f"Invalid specs format: {specs}")
                 return None
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON: {e}")
+            logger.error(f"Response text: {response.text}")
+            return None
     except Exception as e:
         logger.error(f"Error getting vehicle specs: {e}")
         return None
