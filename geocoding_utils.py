@@ -325,3 +325,109 @@ def get_coordinates(address: str) -> dict:
     except Exception as e:
         logger.error(f"Error getting coordinates: {e}")
         return None 
+
+def get_traffic_info(start_coords: dict, end_coords: dict) -> dict:
+    """Get traffic information for a route using OpenRoute API"""
+    try:
+        api_key = os.getenv("OPENROUTE_API_KEY")
+        if not api_key:
+            logger.error("OpenRoute API key not found")
+            return None
+
+        headers = {
+            'Authorization': api_key,
+            'Content-Type': 'application/json'
+        }
+
+        # Prepare the request body
+        body = {
+            "coordinates": [
+                [start_coords['longitude'], start_coords['latitude']],
+                [end_coords['longitude'], end_coords['latitude']]
+            ],
+            "instructions": True,
+            "preference": "fastest",
+            "units": "km",
+            "language": "ar",
+            "geometry_simplify": False,
+            "continue_straight": False,
+            "attributes": ["avgspeed", "percentage"]
+        }
+
+        # Make the request to OpenRoute Directions API
+        url = 'https://api.openrouteservice.org/v2/directions/driving-car'
+        response = requests.post(url, headers=headers, json=body)
+
+        if response.status_code != 200:
+            logger.error(f"OpenRoute API error: {response.status_code}")
+            return None
+
+        data = response.json()
+        if not data.get('features'):
+            return None
+
+        # Process the traffic information
+        traffic_info = {
+            'segments': [],
+            'total_distance': 0,
+            'total_duration': 0
+        }
+
+        for feature in data['features']:
+            properties = feature['properties']
+            geometry = feature['geometry']
+            
+            # Calculate traffic segments
+            segments = []
+            for i in range(len(geometry['coordinates']) - 1):
+                start = geometry['coordinates'][i]
+                end = geometry['coordinates'][i + 1]
+                
+                # Get traffic data for this segment
+                segment_traffic = {
+                    'start': {'lon': start[0], 'lat': start[1]},
+                    'end': {'lon': end[0], 'lat': end[1]},
+                    'speed': properties.get('avgspeed', 0),
+                    'percentage': properties.get('percentage', 0)
+                }
+                
+                # Determine traffic level
+                if segment_traffic['speed'] < 20:
+                    segment_traffic['traffic_level'] = 'heavy'  # Red
+                elif segment_traffic['speed'] < 40:
+                    segment_traffic['traffic_level'] = 'moderate'  # Orange
+                else:
+                    segment_traffic['traffic_level'] = 'light'  # Blue
+                
+                segments.append(segment_traffic)
+            
+            traffic_info['segments'] = segments
+            traffic_info['total_distance'] = properties.get('distance', 0)
+            traffic_info['total_duration'] = properties.get('duration', 0)
+
+        return traffic_info
+
+    except Exception as e:
+        logger.error(f"Error getting traffic info: {e}")
+        return None
+
+def get_route_with_traffic(start_coords: dict, end_coords: dict) -> dict:
+    """Get route information with traffic data"""
+    try:
+        # Get basic route information
+        route_info = get_route(start_coords, end_coords)
+        if not route_info:
+            return None
+
+        # Get traffic information
+        traffic_info = get_traffic_info(start_coords, end_coords)
+        if not traffic_info:
+            return route_info
+
+        # Combine route and traffic information
+        route_info['traffic'] = traffic_info
+        return route_info
+
+    except Exception as e:
+        logger.error(f"Error getting route with traffic: {e}")
+        return None 
