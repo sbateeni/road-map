@@ -33,7 +33,7 @@ def get_vehicle_specs(brand: str, model: str, year: int) -> dict:
     """
     
     # Get response from Gemini
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-2.0-flash-001')
     response = model.generate_content(prompt)
     
     # Parse and cache the response
