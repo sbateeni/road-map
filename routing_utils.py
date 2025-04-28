@@ -3,6 +3,11 @@ from config import OPENROUTE_API_KEY
 from cache_utils import read_cache, write_cache, get_route_cache_key
 from openrouteservice.exceptions import ApiError
 from geocoding_utils import get_coordinates
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Configure OpenRouteService client
 client = openrouteservice.Client(key=OPENROUTE_API_KEY)
@@ -59,13 +64,15 @@ def get_routes(origin_coords: dict, destination_coords: dict, api_key: str, rout
             processed_routes.append(processed_route)
         
         if not processed_routes:
-            print("No valid routes found")
+            logger.warning("No valid routes found")
             return None
         
         # Cache the results
         write_cache(cache_key, processed_routes)
         return processed_routes
-        
+    except ApiError as e:
+        logger.error(f"OpenRouteService API error: {e}")
+        return None
     except Exception as e:
-        print(f"Error getting routes: {e}")
+        logger.error(f"Error getting routes: {e}")
         return None 

@@ -2,7 +2,7 @@ import streamlit as st
 import os
 from dotenv import load_dotenv
 from vehicle_utils import get_vehicle_specs
-from geocoding_utils import get_coordinates
+from geocoding_utils import get_coordinates, search_cities
 from routing_utils import get_routes
 from fuel_calculator import calculate_fuel_cost, extract_fuel_consumption
 from map_utils import create_map, display_map
@@ -74,8 +74,34 @@ if st.button("جلب المواصفات"):
 # عرض حقول إدخال العناوين إذا كانت المواصفات متوفرة
 if st.session_state.specs:
     st.header("نقاط الرحلة")
-    origin = st.text_input("من")
-    destination = st.text_input("إلى")
+    
+    # حقل البحث لنقطة البداية
+    origin_query = st.text_input("من", key="origin_search")
+    if origin_query:
+        with st.spinner("جاري البحث عن المدن..."):
+            cities = search_cities(origin_query)
+            if cities:
+                origin = st.selectbox(
+                    "اختر المدينة",
+                    options=[city['name'] for city in cities],
+                    key="origin_select"
+                )
+            else:
+                st.warning("لم يتم العثور على مدن تطابق البحث")
+    
+    # حقل البحث لنقطة النهاية
+    destination_query = st.text_input("إلى", key="destination_search")
+    if destination_query:
+        with st.spinner("جاري البحث عن المدن..."):
+            cities = search_cities(destination_query)
+            if cities:
+                destination = st.selectbox(
+                    "اختر المدينة",
+                    options=[city['name'] for city in cities],
+                    key="destination_select"
+                )
+            else:
+                st.warning("لم يتم العثور على مدن تطابق البحث")
     
     # إضافة اختيار نوع المسار
     route_type = st.selectbox(
@@ -85,7 +111,7 @@ if st.session_state.specs:
     )
     
     # عرض معلومات البلد إذا تم إدخال العنوان
-    if origin:
+    if 'origin' in locals() and origin:
         with st.spinner("جاري جلب معلومات البلد..."):
             try:
                 origin_coords = get_coordinates(origin)
@@ -109,7 +135,7 @@ if st.session_state.specs:
                 logger.error(f"Error getting origin coordinates: {e}")
                 st.error("حدث خطأ غير متوقع أثناء جلب معلومات البلد")
     
-    if destination:
+    if 'destination' in locals() and destination:
         with st.spinner("جاري جلب معلومات البلد..."):
             try:
                 destination_coords = get_coordinates(destination)
@@ -134,7 +160,7 @@ if st.session_state.specs:
                 st.error("حدث خطأ غير متوقع أثناء جلب معلومات البلد")
     
     if st.button("احسب المسارات"):
-        if origin and destination:
+        if 'origin' in locals() and 'destination' in locals() and origin and destination:
             with st.spinner("جاري حساب المسارات..."):
                 try:
                     # تحويل العناوين إلى إحداثيات
