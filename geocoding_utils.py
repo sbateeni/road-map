@@ -113,8 +113,12 @@ def get_coordinates(address: str) -> dict:
     geolocator = Nominatim(user_agent="road_map_app")
     
     try:
+        # Add "Palestine" to the address if it's a Palestinian city
+        palestinian_cities = ['رام الله', 'بيت لحم', 'جنين', 'نابلس', 'الخليل', 'أريحا', 'غزة']
+        search_address = f"{address}, Palestine" if address in palestinian_cities else address
+        
         # Get location
-        location = geolocator.geocode(address)
+        location = geolocator.geocode(search_address)
         if location:
             coords = {
                 "latitude": location.latitude,
@@ -126,6 +130,22 @@ def get_coordinates(address: str) -> dict:
             country_info = get_country_info(location.latitude, location.longitude)
             if country_info:
                 coords["country_info"] = country_info
+            else:
+                # Default country info for Palestinian cities
+                if address in palestinian_cities:
+                    coords["country_info"] = {
+                        "country": "فلسطين",
+                        "currency": {
+                            "name": "شيكل إسرائيلي",
+                            "code": "ILS",
+                            "symbol": "₪"
+                        },
+                        "fuel_prices": {
+                            "95": 7.7,
+                            "91": 7.2,
+                            "diesel": 7.2
+                        }
+                    }
             
             write_cache(cache_key, coords)
             return coords
