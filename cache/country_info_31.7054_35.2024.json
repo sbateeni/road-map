@@ -1,0 +1,14 @@
+{
+  "country": "Israel",
+  "currency": {
+    "name": "Israeli New Shekel",
+    "code": "ILS",
+    "symbol": "₪"
+  },
+  "fuel_prices": {
+    "95": 7.83,
+    "91": 7.65,
+    "diesel": 7.8
+  },
+  "timestamp": "2025-04-28T12:26:47.086055"
+}

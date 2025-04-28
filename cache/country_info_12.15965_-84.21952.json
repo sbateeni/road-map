@@ -1,0 +1,14 @@
+{
+  "country": "Nicaragua",
+  "currency": {
+    "name": "Córdoba",
+    "code": "NIO",
+    "symbol": "C$"
+  },
+  "fuel_prices": {
+    "95": 0.0,
+    "91": 0.0,
+    "diesel": 0.0
+  },
+  "timestamp": "2025-04-28T12:26:59.596673"
+}

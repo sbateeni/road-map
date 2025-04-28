@@ -28,18 +28,18 @@ except Exception as e:
 
 # قائمة المدن الفلسطينية
 PALESTINIAN_CITIES = {
-    'رام الله': {'lat': 31.9025, 'lon': 35.2061, 'country': 'فلسطين'},
-    'جنين': {'lat': 32.4573, 'lon': 35.2888, 'country': 'فلسطين'},
-    'نابلس': {'lat': 32.2222, 'lon': 35.2544, 'country': 'فلسطين'},
-    'الخليل': {'lat': 31.5326, 'lon': 35.0998, 'country': 'فلسطين'},
-    'بيت لحم': {'lat': 31.7054, 'lon': 35.2024, 'country': 'فلسطين'},
-    'أريحا': {'lat': 31.8575, 'lon': 35.4447, 'country': 'فلسطين'},
-    'غزة': {'lat': 31.5017, 'lon': 34.4668, 'country': 'فلسطين'},
-    'طولكرم': {'lat': 32.3107, 'lon': 35.0286, 'country': 'فلسطين'},
-    'قلقيلية': {'lat': 32.1908, 'lon': 34.9706, 'country': 'فلسطين'},
-    'سلفيت': {'lat': 32.0833, 'lon': 35.1667, 'country': 'فلسطين'},
-    'طوباس': {'lat': 32.3214, 'lon': 35.3697, 'country': 'فلسطين'},
-    'القدس': {'lat': 31.7833, 'lon': 35.2167, 'country': 'فلسطين'}
+    'رام الله': {'lat': 31.9025, 'lon': 35.2061, 'country': 'فلسطين', 'en_name': 'Ramallah'},
+    'جنين': {'lat': 32.4573, 'lon': 35.2888, 'country': 'فلسطين', 'en_name': 'Jenin'},
+    'نابلس': {'lat': 32.2222, 'lon': 35.2544, 'country': 'فلسطين', 'en_name': 'Nablus'},
+    'الخليل': {'lat': 31.5326, 'lon': 35.0998, 'country': 'فلسطين', 'en_name': 'Hebron'},
+    'بيت لحم': {'lat': 31.7054, 'lon': 35.2024, 'country': 'فلسطين', 'en_name': 'Bethlehem'},
+    'أريحا': {'lat': 31.8575, 'lon': 35.4447, 'country': 'فلسطين', 'en_name': 'Jericho'},
+    'غزة': {'lat': 31.5017, 'lon': 34.4668, 'country': 'فلسطين', 'en_name': 'Gaza'},
+    'طولكرم': {'lat': 32.3107, 'lon': 35.0286, 'country': 'فلسطين', 'en_name': 'Tulkarm'},
+    'قلقيلية': {'lat': 32.1908, 'lon': 34.9706, 'country': 'فلسطين', 'en_name': 'Qalqilya'},
+    'سلفيت': {'lat': 32.0833, 'lon': 35.1667, 'country': 'فلسطين', 'en_name': 'Salfit'},
+    'طوباس': {'lat': 32.3214, 'lon': 35.3697, 'country': 'فلسطين', 'en_name': 'Tubas'},
+    'القدس': {'lat': 31.7833, 'lon': 35.2167, 'country': 'فلسطين', 'en_name': 'Jerusalem'}
 }
 
 def search_cities(query: str) -> list:
@@ -53,7 +53,7 @@ def search_cities(query: str) -> list:
             city_info = PALESTINIAN_CITIES[query]
             return [{
                 "name": query,
-                "english_name": query,  # Keep Arabic name for Palestinian cities
+                "english_name": city_info['en_name'],
                 "country": city_info['country'],
                 "coordinates": {
                     "latitude": city_info['lat'],
@@ -78,8 +78,12 @@ def search_cities(query: str) -> list:
         params = {
             'text': query,
             'size': 5,
-            'lang': 'ar',
-            'layers': 'locality,localadmin,country'
+            'lang': 'en',  # Changed to English
+            'layers': 'locality,localadmin,country,neighborhood,street',
+            'boundary.country': 'PS,IL,JO,EG,SA,AE,QA,KW,BH,OM,IQ,SY,LB,LY,DZ,MA,TN,SD,MR,SO,DJ,KM,YE',
+            'focus.point.lat': 31.9522,  # Center of Palestine
+            'focus.point.lon': 35.2332,
+            'focus.point.weight': 10
         }
 
         # Make the request
@@ -415,22 +419,60 @@ def get_route_with_traffic(start_coords: dict, end_coords: dict) -> dict:
     """Get route information with traffic data"""
     try:
         # Get basic route information
+        logger.info(f"Calculating route from {start_coords} to {end_coords}")
         route_info = get_route(start_coords, end_coords)
         if not route_info:
+            logger.error("Failed to get basic route information")
             return None
 
         # Get traffic information
+        logger.info("Getting traffic information")
         traffic_info = get_traffic_info(start_coords, end_coords)
         if not traffic_info:
-            return route_info
+            logger.error("Failed to get traffic information")
+            return route_info  # Return basic route info even if traffic info fails
 
         # Combine route and traffic information
         route_info['traffic'] = traffic_info
+        logger.info(f"Successfully calculated route with traffic: {route_info}")
         return route_info
 
     except Exception as e:
         logger.error(f"Error getting route with traffic: {e}")
         return None
+
+def translate_city_name(city_name: str) -> str:
+    """Translate city name from Arabic to English using Gemini API"""
+    try:
+        if not gemini_model:
+            logger.error("Gemini model not configured")
+            return city_name
+
+        # Check if it's a Palestinian city first
+        if city_name in PALESTINIAN_CITIES:
+            return PALESTINIAN_CITIES[city_name]['en_name']
+
+        # Prepare prompt for Gemini
+        prompt = f"""
+        Translate this city name from Arabic to English: {city_name}
+        Return only the English name without any additional text or explanation.
+        """
+        
+        # Get response from Gemini
+        response = gemini_model.generate_content(prompt)
+        
+        if not response or not response.text:
+            logger.error("Received empty response from Gemini")
+            return city_name
+        
+        # Clean the response
+        translated_name = response.text.strip()
+        logger.info(f"Translated {city_name} to {translated_name}")
+        return translated_name
+
+    except Exception as e:
+        logger.error(f"Error translating city name: {e}")
+        return city_name
 
 def get_route(start_coords: dict, end_coords: dict) -> dict:
     """Get route information using OpenRoute API"""
@@ -445,17 +487,32 @@ def get_route(start_coords: dict, end_coords: dict) -> dict:
             'Content-Type': 'application/json'
         }
 
-        # Validate and extract coordinates
+        # Extract coordinates from the nested structure
         try:
-            # Extract coordinates from the dictionary
-            start_lat = float(start_coords.get('latitude', 0))
-            start_lon = float(start_coords.get('longitude', 0))
-            end_lat = float(end_coords.get('latitude', 0))
-            end_lon = float(end_coords.get('longitude', 0))
+            # Handle both direct coordinates and nested structure
+            if 'coordinates' in start_coords:
+                start_lat = float(start_coords['coordinates'].get('latitude', 0))
+                start_lon = float(start_coords['coordinates'].get('longitude', 0))
+            else:
+                start_lat = float(start_coords.get('latitude', 0))
+                start_lon = float(start_coords.get('longitude', 0))
+
+            if 'coordinates' in end_coords:
+                end_lat = float(end_coords['coordinates'].get('latitude', 0))
+                end_lon = float(end_coords['coordinates'].get('longitude', 0))
+            else:
+                end_lat = float(end_coords.get('latitude', 0))
+                end_lon = float(end_coords.get('longitude', 0))
             
             # Validate coordinates
             if not all(isinstance(x, (int, float)) for x in [start_lat, start_lon, end_lat, end_lon]):
                 raise ValueError("Invalid coordinate values")
+            
+            # Validate coordinate ranges
+            if not (-90 <= start_lat <= 90) or not (-90 <= end_lat <= 90):
+                raise ValueError("Latitude must be between -90 and 90")
+            if not (-180 <= start_lon <= 180) or not (-180 <= end_lon <= 180):
+                raise ValueError("Longitude must be between -180 and 180")
             
             logger.info(f"Calculating route from ({start_lat}, {start_lon}) to ({end_lat}, {end_lon})")
         except (KeyError, ValueError, TypeError) as e:
@@ -463,6 +520,18 @@ def get_route(start_coords: dict, end_coords: dict) -> dict:
             logger.error(f"Start coordinates: {start_coords}")
             logger.error(f"End coordinates: {end_coords}")
             return None
+
+        # Translate city names if they exist in the coordinates
+        start_city = start_coords.get('name', '')
+        end_city = end_coords.get('name', '')
+        
+        if start_city:
+            start_city_en = translate_city_name(start_city)
+            logger.info(f"Translated start city from {start_city} to {start_city_en}")
+        
+        if end_city:
+            end_city_en = translate_city_name(end_city)
+            logger.info(f"Translated end city from {end_city} to {end_city_en}")
 
         # Prepare the request body with correct coordinate format
         body = {
@@ -473,12 +542,19 @@ def get_route(start_coords: dict, end_coords: dict) -> dict:
             "instructions": True,
             "preference": "fastest",
             "units": "km",
-            "language": "ar",
+            "language": "en",
             "geometry_simplify": False,
-            "continue_straight": False
+            "continue_straight": False,
+            "elevation": False,
+            "options": {
+                "avoid_features": ["highways"],
+                "avoid_borders": "all",
+                "avoid_countries": ["IL"]
+            }
         }
 
-        logger.info("Sending request to OpenRoute API...")
+        logger.info("Sending request to OpenRoute Directions API")
+        logger.info(f"Request body: {body}")
         
         # Make the request to OpenRoute Directions API
         url = 'https://api.openrouteservice.org/v2/directions/driving-car'
@@ -491,8 +567,10 @@ def get_route(start_coords: dict, end_coords: dict) -> dict:
             return None
 
         data = response.json()
-        if not data.get('features'):
-            logger.error("No route features found in response")
+        
+        # Check if we have routes in the response
+        if not data.get('routes'):
+            logger.error("No routes found in response")
             logger.error(f"Response data: {data}")
             return None
 
@@ -500,18 +578,97 @@ def get_route(start_coords: dict, end_coords: dict) -> dict:
         route_info = {
             'distance': 0,
             'duration': 0,
-            'geometry': []
+            'geometry': [],
+            'instructions': [],
+            'fuel_cost': 0,
+            'currency': {
+                'name': 'شيكل إسرائيلي',
+                'code': 'ILS',
+                'symbol': '₪'
+            },
+            'traffic': {
+                'segments': [],
+                'total_distance': 0,
+                'total_duration': 0
+            }
         }
 
-        for feature in data['features']:
-            properties = feature['properties']
-            geometry = feature['geometry']
-            
-            route_info['distance'] = properties.get('distance', 0)
-            route_info['duration'] = properties.get('duration', 0)
-            route_info['geometry'] = geometry['coordinates']
+        # Get the first route
+        route = data['routes'][0]
+        
+        # Extract summary information
+        summary = route.get('summary', {})
+        route_info['distance'] = summary.get('distance', 0)
+        route_info['duration'] = summary.get('duration', 0)
 
-        logger.info(f"Route calculated successfully. Distance: {route_info['distance']}km, Duration: {route_info['duration']}s")
+        # Extract geometry
+        if 'geometry' in route:
+            # Check if geometry is in GeoJSON format
+            if isinstance(route['geometry'], dict) and 'coordinates' in route['geometry']:
+                route_info['geometry'] = route['geometry']['coordinates']
+            # Check if geometry is in encoded polyline format
+            elif isinstance(route['geometry'], str):
+                # For now, we'll use the waypoints to create a simple line
+                route_info['geometry'] = [
+                    [start_lon, start_lat],
+                    [end_lon, end_lat]
+                ]
+            else:
+                # Fallback to simple line between start and end points
+                route_info['geometry'] = [
+                    [start_lon, start_lat],
+                    [end_lon, end_lat]
+                ]
+        else:
+            # Fallback to simple line between start and end points
+            route_info['geometry'] = [
+                [start_lon, start_lat],
+                [end_lon, end_lat]
+            ]
+
+        # Extract instructions and traffic information from segments
+        for segment in route.get('segments', []):
+            # Add segment to traffic information
+            traffic_segment = {
+                'start': segment.get('start', {}),
+                'end': segment.get('end', {}),
+                'distance': segment.get('distance', 0),
+                'duration': segment.get('duration', 0),
+                'traffic_level': 'normal'  # Default traffic level
+            }
+            
+            # Calculate traffic level based on duration/distance ratio
+            if segment.get('distance', 0) > 0:
+                speed = segment.get('duration', 0) / segment.get('distance', 0)
+                if speed > 2:  # More than 2 minutes per km
+                    traffic_segment['traffic_level'] = 'heavy'
+                elif speed > 1.5:  # More than 1.5 minutes per km
+                    traffic_segment['traffic_level'] = 'moderate'
+            
+            route_info['traffic']['segments'].append(traffic_segment)
+            
+            # Add instructions
+            for step in segment.get('steps', []):
+                instruction = {
+                    'distance': step.get('distance', 0),
+                    'duration': step.get('duration', 0),
+                    'instruction': step.get('instruction', ''),
+                    'name': step.get('name', ''),
+                    'type': step.get('type', 0)
+                }
+                route_info['instructions'].append(instruction)
+
+        # Calculate fuel cost
+        # Assuming average fuel consumption of 8L/100km for a 2020 car
+        fuel_consumption = 8  # L/100km
+        fuel_price = 7.7  # ILS/L for 95 octane in Palestine
+        route_info['fuel_cost'] = (route_info['distance'] / 100) * fuel_consumption * fuel_price
+
+        # Update total traffic information
+        route_info['traffic']['total_distance'] = route_info['distance']
+        route_info['traffic']['total_duration'] = route_info['duration']
+
+        logger.info(f"Route calculated successfully. Distance: {route_info['distance']}km, Duration: {route_info['duration']}s, Fuel Cost: {route_info['fuel_cost']} {route_info['currency']['symbol']}")
         return route_info
 
     except Exception as e:
