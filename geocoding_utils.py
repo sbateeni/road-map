@@ -445,11 +445,21 @@ def get_route(start_coords: dict, end_coords: dict) -> dict:
             'Content-Type': 'application/json'
         }
 
+        # Validate coordinates
+        try:
+            start_lat = float(start_coords['latitude'])
+            start_lon = float(start_coords['longitude'])
+            end_lat = float(end_coords['latitude'])
+            end_lon = float(end_coords['longitude'])
+        except (KeyError, ValueError) as e:
+            logger.error(f"Invalid coordinates format: {e}")
+            return None
+
         # Prepare the request body with correct coordinate format
         body = {
             "coordinates": [
-                [float(start_coords['longitude']), float(start_coords['latitude'])],
-                [float(end_coords['longitude']), float(end_coords['latitude'])]
+                [start_lon, start_lat],
+                [end_lon, end_lat]
             ],
             "instructions": True,
             "preference": "fastest",
@@ -465,10 +475,12 @@ def get_route(start_coords: dict, end_coords: dict) -> dict:
 
         if response.status_code != 200:
             logger.error(f"OpenRoute API error: {response.status_code}")
+            logger.error(f"Response content: {response.text}")
             return None
 
         data = response.json()
         if not data.get('features'):
+            logger.error("No route features found in response")
             return None
 
         # Process the route information
