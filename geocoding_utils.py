@@ -430,4 +430,64 @@ def get_route_with_traffic(start_coords: dict, end_coords: dict) -> dict:
 
     except Exception as e:
         logger.error(f"Error getting route with traffic: {e}")
+        return None
+
+def get_route(start_coords: dict, end_coords: dict) -> dict:
+    """Get route information using OpenRoute API"""
+    try:
+        api_key = os.getenv("OPENROUTE_API_KEY")
+        if not api_key:
+            logger.error("OpenRoute API key not found")
+            return None
+
+        headers = {
+            'Authorization': api_key,
+            'Content-Type': 'application/json'
+        }
+
+        # Prepare the request body with correct coordinate format
+        body = {
+            "coordinates": [
+                [float(start_coords['longitude']), float(start_coords['latitude'])],
+                [float(end_coords['longitude']), float(end_coords['latitude'])]
+            ],
+            "instructions": True,
+            "preference": "fastest",
+            "units": "km",
+            "language": "ar",
+            "geometry_simplify": False,
+            "continue_straight": False
+        }
+
+        # Make the request to OpenRoute Directions API
+        url = 'https://api.openrouteservice.org/v2/directions/driving-car'
+        response = requests.post(url, headers=headers, json=body)
+
+        if response.status_code != 200:
+            logger.error(f"OpenRoute API error: {response.status_code}")
+            return None
+
+        data = response.json()
+        if not data.get('features'):
+            return None
+
+        # Process the route information
+        route_info = {
+            'distance': 0,
+            'duration': 0,
+            'geometry': []
+        }
+
+        for feature in data['features']:
+            properties = feature['properties']
+            geometry = feature['geometry']
+            
+            route_info['distance'] = properties.get('distance', 0)
+            route_info['duration'] = properties.get('duration', 0)
+            route_info['geometry'] = geometry['coordinates']
+
+        return route_info
+
+    except Exception as e:
+        logger.error(f"Error getting route: {e}")
         return None 
