@@ -451,8 +451,12 @@ def get_route(start_coords: dict, end_coords: dict) -> dict:
             start_lon = float(start_coords['longitude'])
             end_lat = float(end_coords['latitude'])
             end_lon = float(end_coords['longitude'])
+            
+            logger.info(f"Calculating route from ({start_lat}, {start_lon}) to ({end_lat}, {end_lon})")
         except (KeyError, ValueError) as e:
             logger.error(f"Invalid coordinates format: {e}")
+            logger.error(f"Start coordinates: {start_coords}")
+            logger.error(f"End coordinates: {end_coords}")
             return None
 
         # Prepare the request body with correct coordinate format
@@ -469,6 +473,8 @@ def get_route(start_coords: dict, end_coords: dict) -> dict:
             "continue_straight": False
         }
 
+        logger.info("Sending request to OpenRoute API...")
+        
         # Make the request to OpenRoute Directions API
         url = 'https://api.openrouteservice.org/v2/directions/driving-car'
         response = requests.post(url, headers=headers, json=body)
@@ -476,11 +482,13 @@ def get_route(start_coords: dict, end_coords: dict) -> dict:
         if response.status_code != 200:
             logger.error(f"OpenRoute API error: {response.status_code}")
             logger.error(f"Response content: {response.text}")
+            logger.error(f"Request body: {body}")
             return None
 
         data = response.json()
         if not data.get('features'):
             logger.error("No route features found in response")
+            logger.error(f"Response data: {data}")
             return None
 
         # Process the route information
@@ -498,8 +506,11 @@ def get_route(start_coords: dict, end_coords: dict) -> dict:
             route_info['duration'] = properties.get('duration', 0)
             route_info['geometry'] = geometry['coordinates']
 
+        logger.info(f"Route calculated successfully. Distance: {route_info['distance']}km, Duration: {route_info['duration']}s")
         return route_info
 
     except Exception as e:
         logger.error(f"Error getting route: {e}")
+        logger.error(f"Start coordinates: {start_coords}")
+        logger.error(f"End coordinates: {end_coords}")
         return None 
