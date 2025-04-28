@@ -33,7 +33,6 @@ def get_routes(origin_coords: dict, destination_coords: dict, api_key: str, rout
             ],
             profile='driving-car',
             format='geojson',
-            alternatives=True,  # Get alternative routes
             options={
                 "avoid_features": ["highways", "tollways"] if route_type == "مسار الضفة الغربية فقط" else []
             }
@@ -41,27 +40,29 @@ def get_routes(origin_coords: dict, destination_coords: dict, api_key: str, rout
         
         # Process routes
         processed_routes = []
-        for route in routes['features']:
-            # Check if route is in West Bank if required
-            if route_type == "مسار الضفة الغربية فقط":
-                # Check if route passes through West Bank
-                is_west_bank = False
-                for coord in route['geometry']['coordinates']:
-                    # Check if coordinate is in West Bank
-                    # Using more accurate coordinates for West Bank
-                    if (34.5 <= coord[1] <= 35.5 and 31.0 <= coord[0] <= 32.5):
-                        is_west_bank = True
-                        break
-                
-                if not is_west_bank:
-                    continue
-            
-            processed_route = {
-                'distance': route['properties']['segments'][0]['distance'] / 1000,  # Convert to km
-                'duration': route['properties']['segments'][0]['duration'] / 60,  # Convert to minutes
-                'geometry': route['geometry']['coordinates']
-            }
-            processed_routes.append(processed_route)
+        
+        # Check if routes is a list or a single route
+        if isinstance(routes, list):
+            route_features = routes
+        else:
+            route_features = [routes]
+        
+        for route in route_features:
+            if 'features' in route:
+                for feature in route['features']:
+                    processed_route = {
+                        'distance': feature['properties']['segments'][0]['distance'] / 1000,  # Convert to km
+                        'duration': feature['properties']['segments'][0]['duration'] / 60,  # Convert to minutes
+                        'geometry': feature['geometry']['coordinates']
+                    }
+                    processed_routes.append(processed_route)
+            else:
+                processed_route = {
+                    'distance': route['properties']['segments'][0]['distance'] / 1000,  # Convert to km
+                    'duration': route['properties']['segments'][0]['duration'] / 60,  # Convert to minutes
+                    'geometry': route['geometry']['coordinates']
+                }
+                processed_routes.append(processed_route)
         
         if not processed_routes:
             logger.warning("No valid routes found")
