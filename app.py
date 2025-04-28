@@ -47,6 +47,12 @@ if 'origin_country_info' not in st.session_state:
 if 'destination_country_info' not in st.session_state:
     st.session_state.destination_country_info = None
 
+# تخزين نتائج البحث في حالة الجلسة
+if 'origin_cities' not in st.session_state:
+    st.session_state.origin_cities = []
+if 'destination_cities' not in st.session_state:
+    st.session_state.destination_cities = []
+
 # زر جلب المواصفات
 if st.button("جلب المواصفات"):
     if brand and model and year:
@@ -81,6 +87,7 @@ if st.session_state.specs:
         with st.spinner("جاري البحث عن المدن..."):
             cities = search_cities(origin_query)
             if cities:
+                st.session_state.origin_cities = cities
                 origin = st.selectbox(
                     "اختر المدينة",
                     options=[city['name'] for city in cities],
@@ -95,6 +102,7 @@ if st.session_state.specs:
         with st.spinner("جاري البحث عن المدن..."):
             cities = search_cities(destination_query)
             if cities:
+                st.session_state.destination_cities = cities
                 destination = st.selectbox(
                     "اختر المدينة",
                     options=[city['name'] for city in cities],
@@ -114,23 +122,37 @@ if st.session_state.specs:
     if 'origin' in locals() and origin:
         with st.spinner("جاري جلب معلومات البلد..."):
             try:
-                origin_coords = get_coordinates(origin)
-                if origin_coords and 'country_info' in origin_coords:
-                    st.session_state.origin_country_info = origin_coords['country_info']
-                    st.subheader(f"معلومات البلد: {origin}")
+                # استخدام الإحداثيات من نتائج البحث
+                selected_city = next((city for city in st.session_state.origin_cities if city['name'] == origin), None)
+                if selected_city:
+                    origin_coords = {
+                        "latitude": selected_city['coordinates']['latitude'],
+                        "longitude": selected_city['coordinates']['longitude'],
+                        "address": origin
+                    }
                     
-                    # عرض معلومات البلد بشكل أفضل
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.metric("البلد", origin_coords['country_info']['country'])
-                        st.metric("العملة", f"{origin_coords['country_info']['currency']['name']} ({origin_coords['country_info']['currency']['symbol']})")
-                    with col2:
-                        st.metric("سعر البنزين 95", f"{origin_coords['country_info']['fuel_prices']['95']} {origin_coords['country_info']['currency']['symbol']}")
-                        st.metric("سعر البنزين 91", f"{origin_coords['country_info']['fuel_prices']['91']} {origin_coords['country_info']['currency']['symbol']}")
-                        st.metric("سعر الديزل", f"{origin_coords['country_info']['fuel_prices']['diesel']} {origin_coords['country_info']['currency']['symbol']}")
+                    # الحصول على معلومات البلد
+                    country_info = get_country_info(origin_coords['latitude'], origin_coords['longitude'])
+                    if country_info:
+                        origin_coords['country_info'] = country_info
+                        st.session_state.origin_country_info = country_info
+                        
+                        st.subheader(f"معلومات البلد: {origin}")
+                        
+                        # عرض معلومات البلد بشكل أفضل
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.metric("البلد", country_info['country'])
+                            st.metric("العملة", f"{country_info['currency']['name']} ({country_info['currency']['symbol']})")
+                        with col2:
+                            st.metric("سعر البنزين 95", f"{country_info['fuel_prices']['95']} {country_info['currency']['symbol']}")
+                            st.metric("سعر البنزين 91", f"{country_info['fuel_prices']['91']} {country_info['currency']['symbol']}")
+                            st.metric("سعر الديزل", f"{country_info['fuel_prices']['diesel']} {country_info['currency']['symbol']}")
+                    else:
+                        st.error("لم يتم العثور على معلومات البلد")
+                        st.session_state.origin_country_info = None
                 else:
-                    st.error("لم يتم العثور على معلومات البلد")
-                    st.session_state.origin_country_info = None
+                    st.error("لم يتم العثور على معلومات المدينة")
             except Exception as e:
                 logger.error(f"Error getting origin coordinates: {e}")
                 st.error("حدث خطأ غير متوقع أثناء جلب معلومات البلد")
@@ -138,23 +160,37 @@ if st.session_state.specs:
     if 'destination' in locals() and destination:
         with st.spinner("جاري جلب معلومات البلد..."):
             try:
-                destination_coords = get_coordinates(destination)
-                if destination_coords and 'country_info' in destination_coords:
-                    st.session_state.destination_country_info = destination_coords['country_info']
-                    st.subheader(f"معلومات البلد: {destination}")
+                # استخدام الإحداثيات من نتائج البحث
+                selected_city = next((city for city in st.session_state.destination_cities if city['name'] == destination), None)
+                if selected_city:
+                    destination_coords = {
+                        "latitude": selected_city['coordinates']['latitude'],
+                        "longitude": selected_city['coordinates']['longitude'],
+                        "address": destination
+                    }
                     
-                    # عرض معلومات البلد بشكل أفضل
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.metric("البلد", destination_coords['country_info']['country'])
-                        st.metric("العملة", f"{destination_coords['country_info']['currency']['name']} ({destination_coords['country_info']['currency']['symbol']})")
-                    with col2:
-                        st.metric("سعر البنزين 95", f"{destination_coords['country_info']['fuel_prices']['95']} {destination_coords['country_info']['currency']['symbol']}")
-                        st.metric("سعر البنزين 91", f"{destination_coords['country_info']['fuel_prices']['91']} {destination_coords['country_info']['currency']['symbol']}")
-                        st.metric("سعر الديزل", f"{destination_coords['country_info']['fuel_prices']['diesel']} {destination_coords['country_info']['currency']['symbol']}")
+                    # الحصول على معلومات البلد
+                    country_info = get_country_info(destination_coords['latitude'], destination_coords['longitude'])
+                    if country_info:
+                        destination_coords['country_info'] = country_info
+                        st.session_state.destination_country_info = country_info
+                        
+                        st.subheader(f"معلومات البلد: {destination}")
+                        
+                        # عرض معلومات البلد بشكل أفضل
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.metric("البلد", country_info['country'])
+                            st.metric("العملة", f"{country_info['currency']['name']} ({country_info['currency']['symbol']})")
+                        with col2:
+                            st.metric("سعر البنزين 95", f"{country_info['fuel_prices']['95']} {country_info['currency']['symbol']}")
+                            st.metric("سعر البنزين 91", f"{country_info['fuel_prices']['91']} {country_info['currency']['symbol']}")
+                            st.metric("سعر الديزل", f"{country_info['fuel_prices']['diesel']} {country_info['currency']['symbol']}")
+                    else:
+                        st.error("لم يتم العثور على معلومات البلد")
+                        st.session_state.destination_country_info = None
                 else:
-                    st.error("لم يتم العثور على معلومات البلد")
-                    st.session_state.destination_country_info = None
+                    st.error("لم يتم العثور على معلومات المدينة")
             except Exception as e:
                 logger.error(f"Error getting destination coordinates: {e}")
                 st.error("حدث خطأ غير متوقع أثناء جلب معلومات البلد")
@@ -163,11 +199,23 @@ if st.session_state.specs:
         if 'origin' in locals() and 'destination' in locals() and origin and destination:
             with st.spinner("جاري حساب المسارات..."):
                 try:
-                    # تحويل العناوين إلى إحداثيات
-                    origin_coords = get_coordinates(origin)
-                    destination_coords = get_coordinates(destination)
+                    # استخدام الإحداثيات من نتائج البحث
+                    origin_city = next((city for city in st.session_state.origin_cities if city['name'] == origin), None)
+                    destination_city = next((city for city in st.session_state.destination_cities if city['name'] == destination), None)
                     
-                    if origin_coords and destination_coords:
+                    if origin_city and destination_city:
+                        origin_coords = {
+                            "latitude": origin_city['coordinates']['latitude'],
+                            "longitude": origin_city['coordinates']['longitude'],
+                            "address": origin
+                        }
+                        
+                        destination_coords = {
+                            "latitude": destination_city['coordinates']['latitude'],
+                            "longitude": destination_city['coordinates']['longitude'],
+                            "address": destination
+                        }
+                        
                         # الحصول على المسارات
                         routes = get_routes(
                             origin_coords,
@@ -225,7 +273,7 @@ if st.session_state.specs:
                         else:
                             st.error("لم يتم العثور على المسارات")
                     else:
-                        st.error("لم يتم العثور على الإحداثيات للعناوين المدخلة")
+                        st.error("لم يتم العثور على معلومات المدن")
                 except Exception as e:
                     logger.error(f"Error calculating routes: {e}")
                     st.error("حدث خطأ غير متوقع أثناء حساب المسارات")
