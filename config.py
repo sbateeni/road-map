@@ -9,7 +9,7 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 OPENROUTE_API_KEY = os.getenv('OPENROUTE_API_KEY')
 
 # إعدادات التخزين المؤقت
-CACHE_DIR = '/tmp/cache'  # استخدام مجلد مؤقت في Streamlit Cloud
+CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache')  # استخدام مجلد نسبي
 VEHICLE_CACHE_DIR = os.path.join(CACHE_DIR, 'vehicles')
 GEOCODE_CACHE_DIR = os.path.join(CACHE_DIR, 'geocode')
 ROUTE_CACHE_DIR = os.path.join(CACHE_DIR, 'routes')
