@@ -46,7 +46,6 @@ def search_cities(query: str) -> list:
         # Prepare prompt for Gemini
         prompt = f"""
         Please search for cities and locations that match the query: "{query}"
-        Focus on cities in the United Arab Emirates and nearby countries.
         Return the results as a JSON array of objects with this structure:
         [
             {{
@@ -218,14 +217,8 @@ def get_coordinates(address: str) -> dict:
     geolocator = Nominatim(user_agent="road_map_app")
     
     try:
-        # Handle UAE cities
-        if address in UAE_CITIES:
-            search_address = f"{UAE_CITIES[address]}, United Arab Emirates"
-        else:
-            search_address = address
-        
         # Get location
-        location = geolocator.geocode(search_address)
+        location = geolocator.geocode(address)
         if location:
             coords = {
                 "latitude": location.latitude,
@@ -239,20 +232,19 @@ def get_coordinates(address: str) -> dict:
                 coords["country_info"] = country_info
             else:
                 # Default UAE info if country info fails
-                if address in UAE_CITIES:
-                    coords["country_info"] = {
-                        "country": "الإمارات العربية المتحدة",
-                        "currency": {
-                            "name": "درهم إماراتي",
-                            "code": "AED",
-                            "symbol": "د.إ"
-                        },
-                        "fuel_prices": {
-                            "95": 3.18,
-                            "91": 3.03,
-                            "diesel": 3.29
-                        }
+                coords["country_info"] = {
+                    "country": "الإمارات العربية المتحدة",
+                    "currency": {
+                        "name": "درهم إماراتي",
+                        "code": "AED",
+                        "symbol": "د.إ"
+                    },
+                    "fuel_prices": {
+                        "95": 3.18,
+                        "91": 3.03,
+                        "diesel": 3.29
                     }
+                }
             
             write_cache(cache_key, coords)
             return coords

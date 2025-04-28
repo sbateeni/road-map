@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 from dotenv import load_dotenv
-from vehicle_utils import get_vehicle_specs
+from vehicle_utils import get_vehicle_specs, get_vehicle_models
 from geocoding_utils import get_coordinates, search_cities
 from routing_utils import get_routes
 from fuel_calculator import calculate_fuel_cost, extract_fuel_consumption
@@ -33,7 +33,17 @@ if not os.getenv("OPENROUTE_API_KEY"):
 # إدخال بيانات المركبة
 st.header("بيانات المركبة")
 brand = st.text_input("الماركة")
-model = st.text_input("الموديل")
+if brand:
+    with st.spinner("جاري البحث عن الموديلات..."):
+        models = get_vehicle_models(brand, os.getenv("GEMINI_API_KEY"))
+        if models:
+            model = st.selectbox("الموديل", options=models)
+        else:
+            st.warning("لم يتم العثور على موديلات لهذه الماركة")
+            model = st.text_input("الموديل")
+else:
+    model = st.text_input("الموديل")
+
 year = st.number_input("سنة التصنيع", min_value=1900, max_value=2024, value=2020)
 fuel_type = st.selectbox("نوع الوقود", ["بنزين 95", "بنزين 91", "ديزل"])
 
@@ -131,32 +141,25 @@ if st.session_state.specs:
                         "address": origin
                     }
                     
-                    # معلومات افتراضية للإمارات
-                    st.session_state.origin_country_info = {
-                        "country": "الإمارات العربية المتحدة",
-                        "currency": {
-                            "name": "درهم إماراتي",
-                            "code": "AED",
-                            "symbol": "د.إ"
-                        },
-                        "fuel_prices": {
-                            "95": 3.18,
-                            "91": 3.03,
-                            "diesel": 3.29
-                        }
-                    }
-                    
-                    st.subheader(f"معلومات البلد: {origin}")
-                    
-                    # عرض معلومات البلد بشكل أفضل
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.metric("البلد", st.session_state.origin_country_info['country'])
-                        st.metric("العملة", f"{st.session_state.origin_country_info['currency']['name']} ({st.session_state.origin_country_info['currency']['symbol']})")
-                    with col2:
-                        st.metric("سعر البنزين 95", f"{st.session_state.origin_country_info['fuel_prices']['95']} {st.session_state.origin_country_info['currency']['symbol']}")
-                        st.metric("سعر البنزين 91", f"{st.session_state.origin_country_info['fuel_prices']['91']} {st.session_state.origin_country_info['currency']['symbol']}")
-                        st.metric("سعر الديزل", f"{st.session_state.origin_country_info['fuel_prices']['diesel']} {st.session_state.origin_country_info['currency']['symbol']}")
+                    # الحصول على معلومات البلد
+                    country_info = get_country_info(origin_coords['latitude'], origin_coords['longitude'])
+                    if country_info:
+                        st.session_state.origin_country_info = country_info
+                        
+                        st.subheader(f"معلومات البلد: {origin}")
+                        
+                        # عرض معلومات البلد بشكل أفضل
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.metric("البلد", country_info['country'])
+                            st.metric("العملة", f"{country_info['currency']['name']} ({country_info['currency']['symbol']})")
+                        with col2:
+                            st.metric("سعر البنزين 95", f"{country_info['fuel_prices']['95']} {country_info['currency']['symbol']}")
+                            st.metric("سعر البنزين 91", f"{country_info['fuel_prices']['91']} {country_info['currency']['symbol']}")
+                            st.metric("سعر الديزل", f"{country_info['fuel_prices']['diesel']} {country_info['currency']['symbol']}")
+                    else:
+                        st.error("لم يتم العثور على معلومات البلد")
+                        st.session_state.origin_country_info = None
                 else:
                     st.error("لم يتم العثور على معلومات المدينة")
             except Exception as e:
@@ -175,32 +178,25 @@ if st.session_state.specs:
                         "address": destination
                     }
                     
-                    # معلومات افتراضية للإمارات
-                    st.session_state.destination_country_info = {
-                        "country": "الإمارات العربية المتحدة",
-                        "currency": {
-                            "name": "درهم إماراتي",
-                            "code": "AED",
-                            "symbol": "د.إ"
-                        },
-                        "fuel_prices": {
-                            "95": 3.18,
-                            "91": 3.03,
-                            "diesel": 3.29
-                        }
-                    }
-                    
-                    st.subheader(f"معلومات البلد: {destination}")
-                    
-                    # عرض معلومات البلد بشكل أفضل
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.metric("البلد", st.session_state.destination_country_info['country'])
-                        st.metric("العملة", f"{st.session_state.destination_country_info['currency']['name']} ({st.session_state.destination_country_info['currency']['symbol']})")
-                    with col2:
-                        st.metric("سعر البنزين 95", f"{st.session_state.destination_country_info['fuel_prices']['95']} {st.session_state.destination_country_info['currency']['symbol']}")
-                        st.metric("سعر البنزين 91", f"{st.session_state.destination_country_info['fuel_prices']['91']} {st.session_state.destination_country_info['currency']['symbol']}")
-                        st.metric("سعر الديزل", f"{st.session_state.destination_country_info['fuel_prices']['diesel']} {st.session_state.destination_country_info['currency']['symbol']}")
+                    # الحصول على معلومات البلد
+                    country_info = get_country_info(destination_coords['latitude'], destination_coords['longitude'])
+                    if country_info:
+                        st.session_state.destination_country_info = country_info
+                        
+                        st.subheader(f"معلومات البلد: {destination}")
+                        
+                        # عرض معلومات البلد بشكل أفضل
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.metric("البلد", country_info['country'])
+                            st.metric("العملة", f"{country_info['currency']['name']} ({country_info['currency']['symbol']})")
+                        with col2:
+                            st.metric("سعر البنزين 95", f"{country_info['fuel_prices']['95']} {country_info['currency']['symbol']}")
+                            st.metric("سعر البنزين 91", f"{country_info['fuel_prices']['91']} {country_info['currency']['symbol']}")
+                            st.metric("سعر الديزل", f"{country_info['fuel_prices']['diesel']} {country_info['currency']['symbol']}")
+                    else:
+                        st.error("لم يتم العثور على معلومات البلد")
+                        st.session_state.destination_country_info = None
                 else:
                     st.error("لم يتم العثور على معلومات المدينة")
             except Exception as e:
