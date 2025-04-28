@@ -2,7 +2,7 @@ import streamlit as st
 import os
 from dotenv import load_dotenv
 from vehicle_utils import get_vehicle_specs, get_vehicle_models
-from geocoding_utils import get_coordinates, search_cities
+from geocoding_utils import get_coordinates, search_cities, get_country_info
 from routing_utils import get_routes
 from fuel_calculator import calculate_fuel_cost, extract_fuel_consumption
 from map_utils import create_map, display_map

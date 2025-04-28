@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from fuel_prices import get_fuel_prices
 import logging
 import re
+import requests
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -42,51 +43,77 @@ PALESTINIAN_CITIES = {
 }
 
 def search_cities(query: str) -> list:
-    """Search for cities using Nominatim and Gemini API"""
+    """Search for cities using OpenRoute API"""
     if not query:
         return []
 
     try:
-        # Initialize Nominatim
-        geolocator = Nominatim(user_agent="road_map_app")
-        
-        # Search for locations
-        locations = geolocator.geocode(query, exactly_one=False, limit=5)
-        
-        if not locations:
+        # Check if it's a Palestinian city first
+        if query in PALESTINIAN_CITIES:
+            city_info = PALESTINIAN_CITIES[query]
+            return [{
+                "name": query,
+                "english_name": query,  # Keep Arabic name for Palestinian cities
+                "country": city_info['country'],
+                "coordinates": {
+                    "latitude": city_info['lat'],
+                    "longitude": city_info['lon']
+                }
+            }]
+
+        # Get OpenRoute API key
+        api_key = os.getenv("OPENROUTE_API_KEY")
+        if not api_key:
+            logger.error("OpenRoute API key not found")
             return []
+
+        # Prepare the request to OpenRoute Geocoding API
+        headers = {
+            'Authorization': api_key,
+            'Content-Type': 'application/json'
+        }
         
-        # Process locations
+        # Use the geocoding endpoint
+        url = 'https://api.openrouteservice.org/geocode/search'
+        params = {
+            'text': query,
+            'size': 5,
+            'lang': 'ar',
+            'layers': 'locality,localadmin,country'
+        }
+
+        # Make the request
+        response = requests.get(url, headers=headers, params=params)
+        
+        if response.status_code != 200:
+            logger.error(f"OpenRoute API error: {response.status_code}")
+            return []
+
+        data = response.json()
+        if not data.get('features'):
+            return []
+
+        # Process the results
         cities = []
-        for location in locations:
-            # Check if it's a Palestinian city
-            if query in PALESTINIAN_CITIES:
-                city_info = PALESTINIAN_CITIES[query]
+        for feature in data['features']:
+            properties = feature['properties']
+            geometry = feature['geometry']
+            
+            # Get country information
+            country_info = get_country_info(geometry['coordinates'][1], geometry['coordinates'][0])
+            if country_info:
                 cities.append({
-                    "name": query,
-                    "english_name": query,  # Keep Arabic name for Palestinian cities
-                    "country": city_info['country'],
+                    "name": properties.get('name', ''),
+                    "english_name": properties.get('name', ''),
+                    "country": country_info['country'],
                     "coordinates": {
-                        "latitude": city_info['lat'],
-                        "longitude": city_info['lon']
+                        "latitude": geometry['coordinates'][1],
+                        "longitude": geometry['coordinates'][0]
                     }
                 })
-                break
-            else:
-                # Get country information
-                country_info = get_country_info(location.latitude, location.longitude)
-                if country_info:
-                    cities.append({
-                        "name": location.address.split(',')[0],  # Get city name
-                        "english_name": location.address.split(',')[0],  # Keep original name
-                        "country": country_info['country'],
-                        "coordinates": {
-                            "latitude": location.latitude,
-                            "longitude": location.longitude
-                        }
-                    })
-        
+
         return cities
+
     except Exception as e:
         logger.error(f"Error searching cities: {e}")
         return []
