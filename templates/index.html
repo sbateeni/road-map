@@ -6,47 +6,7 @@
     <title>حاسبة تكلفة الرحلة</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8f9fa;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .card {
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        .card-header {
-            background-color: #007bff;
-            color: white;
-            border-radius: 10px 10px 0 0;
-        }
-        .form-control {
-            border-radius: 5px;
-        }
-        .btn-primary {
-            background-color: #007bff;
-            border: none;
-            border-radius: 5px;
-            padding: 10px 20px;
-        }
-        .btn-primary:hover {
-            background-color: #0056b3;
-        }
-        #map {
-            height: 400px;
-            border-radius: 10px;
-            margin-top: 20px;
-        }
-        .select2-container {
-            width: 100% !important;
-        }
-    </style>
+    <link href="/static/css/styles.css" rel="stylesheet">
 </head>
 <body>
     <div class="container">
@@ -82,6 +42,45 @@
                             </div>
                             <button type="button" class="btn btn-primary" onclick="getVehicleSpecs()">جلب المواصفات</button>
                         </form>
+                    </div>
+                </div>
+                
+                <!-- Vehicle Specifications Card -->
+                <div class="card mt-3" id="vehicleSpecsCard" style="display: none;">
+                    <div class="card-header">
+                        <h5 class="mb-0">مواصفات المركبة</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="vehicleSpecs"></div>
+                    </div>
+                </div>
+                
+                <!-- Fuel Consumption Details Card -->
+                <div class="card mt-3" id="fuelConsumptionCard" style="display: none;">
+                    <div class="card-header">
+                        <h5 class="mb-0">تفاصيل استهلاك الوقود</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>معدل الاستهلاك</h6>
+                                <p><strong>في المدينة:</strong> <span id="cityConsumption"></span></p>
+                                <p><strong>على الطريق السريع:</strong> <span id="highwayConsumption"></span></p>
+                                <p><strong>المتوسط:</strong> <span id="averageConsumption"></span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>كفاءة الوقود</h6>
+                                <p><strong>في المدينة:</strong> <span id="cityEfficiency"></span></p>
+                                <p><strong>على الطريق السريع:</strong> <span id="highwayEfficiency"></span></p>
+                                <p><strong>المتوسط:</strong> <span id="averageEfficiency"></span></p>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <h6>الانبعاثات</h6>
+                                <p><strong>انبعاثات CO2:</strong> <span id="emissionsCO2"></span></p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -149,214 +148,6 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script>
-        // Initialize Select2
-        $(document).ready(function() {
-            $('#origin, #destination').select2({
-                placeholder: 'ابحث عن مدينة أو منطقة...',
-                allowClear: true,
-                minimumInputLength: 2,
-                ajax: {
-                    url: '/search_cities',
-                    dataType: 'json',
-                    delay: 250,
-                    data: function(params) {
-                        return {
-                            query: params.term
-                        };
-                    },
-                    processResults: function(data) {
-                        return {
-                            results: data.cities.map(function(city) {
-                                return {
-                                    id: JSON.stringify(city),
-                                    text: `${city.name}, ${city.country}`,
-                                    city: city
-                                };
-                            })
-                        };
-                    },
-                    cache: true
-                }
-            });
-        });
-
-        // Add event listeners for city search
-        $('#origin, #destination').on('select2:select', function(e) {
-            const data = e.params.data;
-            const city = data.city;
-            
-            // Update the map to show the selected city
-            if (city) {
-                const mapContainer = document.getElementById('map');
-                const mapFrame = document.createElement('iframe');
-                mapFrame.src = `https://www.openstreetmap.org/export/embed.html?bbox=${city.coordinates.longitude-0.1},${city.coordinates.latitude-0.1},${city.coordinates.longitude+0.1},${city.coordinates.latitude+0.1}&layer=mapnik&marker=${city.coordinates.latitude},${city.coordinates.longitude}`;
-                mapFrame.style.width = '100%';
-                mapFrame.style.height = '400px';
-                mapFrame.style.border = 'none';
-                
-                mapContainer.innerHTML = '';
-                mapContainer.appendChild(mapFrame);
-            }
-        });
-
-        // Get vehicle specs
-        function getVehicleSpecs() {
-            const brand = document.getElementById('brand').value;
-            const model = document.getElementById('model').value;
-            const year = document.getElementById('year').value;
-            
-            if (!brand || !model || !year) {
-                alert('الرجاء إدخال جميع بيانات المركبة');
-                return;
-            }
-            
-            // Show loading state
-            const button = document.querySelector('button[onclick="getVehicleSpecs()"]');
-            const originalText = button.textContent;
-            button.textContent = 'جاري جلب المواصفات...';
-            button.disabled = true;
-            
-            // Clear previous results
-            const results = document.getElementById('results');
-            results.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">جاري التحميل...</span></div></div>';
-            
-            fetch('/get_vehicle_specs', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    brand: brand,
-                    model: model,
-                    year: parseInt(year)
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    results.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
-                    return;
-                }
-                
-                if (!data.specs) {
-                    results.innerHTML = '<div class="alert alert-warning">لم يتم العثور على مواصفات للمركبة</div>';
-                    return;
-                }
-                
-                // Display specifications
-                const specs = data.specs;
-                results.innerHTML = `
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0">مواصفات المركبة</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p><strong>الماركة:</strong> ${specs.brand}</p>
-                                    <p><strong>الموديل:</strong> ${specs.model}</p>
-                                    <p><strong>سنة التصنيع:</strong> ${specs.year}</p>
-                                    <p><strong>معدل استهلاك الوقود:</strong> ${specs.fuel_consumption} لتر/100 كم</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <p><strong>سعة المحرك:</strong> ${specs.engine_size} سم³</p>
-                                    <p><strong>عدد الأسطوانات:</strong> ${specs.cylinders}</p>
-                                    <p><strong>ناقل الحركة:</strong> ${specs.transmission}</p>
-                                    <p><strong>نوع الوقود:</strong> ${specs.fuel_type}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                results.innerHTML = '<div class="alert alert-danger">حدث خطأ أثناء جلب المواصفات</div>';
-            })
-            .finally(() => {
-                // Restore button state
-                button.textContent = originalText;
-                button.disabled = false;
-            });
-        }
-
-        // Calculate route
-        function calculateRoute() {
-            const origin = document.getElementById('origin').value;
-            const destination = document.getElementById('destination').value;
-            const routeType = document.getElementById('routeType').value;
-            
-            if (!origin || !destination) {
-                alert('الرجاء اختيار نقاط البداية والنهاية');
-                return;
-            }
-            
-            const startCoords = JSON.parse(origin);
-            const endCoords = JSON.parse(destination);
-            
-            fetch('/calculate_route', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    start: startCoords,
-                    end: endCoords,
-                    route_type: routeType
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert(data.error);
-                    return;
-                }
-                
-                // Update map
-                const mapFrame = document.createElement('iframe');
-                mapFrame.src = data.map_url;
-                mapFrame.style.width = '100%';
-                mapFrame.style.height = '400px';
-                mapFrame.style.border = 'none';
-                
-                const mapContainer = document.getElementById('map');
-                mapContainer.innerHTML = '';
-                mapContainer.appendChild(mapFrame);
-                
-                // Update results
-                const results = document.getElementById('results');
-                results.innerHTML = `
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">المسافة</h5>
-                                    <p class="card-text">${data.route.distance} كم</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">الوقت</h5>
-                                    <p class="card-text">${data.route.duration} دقيقة</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">تكلفة الوقود</h5>
-                                    <p class="card-text">${data.route.fuel_cost} د.إ</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            })
-            .catch(error => console.error('Error:', error));
-        }
-    </script>
+    <script src="/static/js/main.js"></script>
 </body>
 </html> 
