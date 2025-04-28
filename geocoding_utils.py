@@ -8,6 +8,7 @@ import os
 from dotenv import load_dotenv
 from fuel_prices import get_fuel_prices
 import logging
+import re
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -24,68 +25,68 @@ except Exception as e:
     logger.error(f"Failed to configure Gemini API: {e}")
     gemini_model = None
 
-# قائمة المدن الإماراتية
-UAE_CITIES = {
-    'دبي': 'Dubai',
-    'ابو ظبي': 'Abu Dhabi',
-    'الشارقة': 'Sharjah',
-    'العين': 'Al Ain',
-    'رأس الخيمة': 'Ras Al Khaimah',
-    'أم القيوين': 'Umm Al Quwain',
-    'عجمان': 'Ajman',
-    'الفجيرة': 'Fujairah'
+# قائمة المدن الفلسطينية
+PALESTINIAN_CITIES = {
+    'رام الله': {'lat': 31.9025, 'lon': 35.2061, 'country': 'فلسطين'},
+    'جنين': {'lat': 32.4573, 'lon': 35.2888, 'country': 'فلسطين'},
+    'نابلس': {'lat': 32.2222, 'lon': 35.2544, 'country': 'فلسطين'},
+    'الخليل': {'lat': 31.5326, 'lon': 35.0998, 'country': 'فلسطين'},
+    'بيت لحم': {'lat': 31.7054, 'lon': 35.2024, 'country': 'فلسطين'},
+    'أريحا': {'lat': 31.8575, 'lon': 35.4447, 'country': 'فلسطين'},
+    'غزة': {'lat': 31.5017, 'lon': 34.4668, 'country': 'فلسطين'},
+    'طولكرم': {'lat': 32.3107, 'lon': 35.0286, 'country': 'فلسطين'},
+    'قلقيلية': {'lat': 32.1908, 'lon': 34.9706, 'country': 'فلسطين'},
+    'سلفيت': {'lat': 32.0833, 'lon': 35.1667, 'country': 'فلسطين'},
+    'طوباس': {'lat': 32.3214, 'lon': 35.3697, 'country': 'فلسطين'},
+    'القدس': {'lat': 31.7833, 'lon': 35.2167, 'country': 'فلسطين'}
 }
 
 def search_cities(query: str) -> list:
-    """Search for cities using Gemini API"""
-    if not gemini_model:
-        logger.error("Gemini model not configured")
+    """Search for cities using Nominatim and Gemini API"""
+    if not query:
         return []
 
     try:
-        # Prepare prompt for Gemini
-        prompt = f"""
-        Please search for cities and locations that match the query: "{query}"
-        Return the results as a JSON array of objects with this structure:
-        [
-            {{
-                "name": "string",  # City name in Arabic
-                "english_name": "string",  # City name in English
-                "country": "string",  # Country name in Arabic
-                "coordinates": {{
-                    "latitude": float,
-                    "longitude": float
-                }}
-            }}
-        ]
-        """
+        # Initialize Nominatim
+        geolocator = Nominatim(user_agent="road_map_app")
         
-        # Get response from Gemini
-        response = gemini_model.generate_content(prompt)
+        # Search for locations
+        locations = geolocator.geocode(query, exactly_one=False, limit=5)
         
-        if not response or not response.text:
-            logger.error("Received empty response from Gemini")
+        if not locations:
             return []
         
-        # Parse response
-        try:
-            # Try to parse the response as JSON
-            cities = json.loads(response.text)
-            return cities
-        except json.JSONDecodeError:
-            # If parsing fails, try to extract JSON from the text
-            try:
-                # Find JSON-like structure in the text
-                start_idx = response.text.find('[')
-                end_idx = response.text.rfind(']') + 1
-                if start_idx >= 0 and end_idx > start_idx:
-                    json_str = response.text[start_idx:end_idx]
-                    cities = json.loads(json_str)
-                    return cities
-            except Exception as e:
-                logger.error(f"Failed to extract JSON from response: {e}")
-                logger.error(f"Response text: {response.text}")
-                return []
+        # Process locations
+        cities = []
+        for location in locations:
+            # Check if it's a Palestinian city
+            if query in PALESTINIAN_CITIES:
+                city_info = PALESTINIAN_CITIES[query]
+                cities.append({
+                    "name": query,
+                    "english_name": query,  # Keep Arabic name for Palestinian cities
+                    "country": city_info['country'],
+                    "coordinates": {
+                        "latitude": city_info['lat'],
+                        "longitude": city_info['lon']
+                    }
+                })
+                break
+            else:
+                # Get country information
+                country_info = get_country_info(location.latitude, location.longitude)
+                if country_info:
+                    cities.append({
+                        "name": location.address.split(',')[0],  # Get city name
+                        "english_name": location.address.split(',')[0],  # Keep original name
+                        "country": country_info['country'],
+                        "coordinates": {
+                            "latitude": location.latitude,
+                            "longitude": location.longitude
+                        }
+                    })
+        
+        return cities
     except Exception as e:
         logger.error(f"Error searching cities: {e}")
         return []
@@ -149,12 +150,18 @@ def get_country_info(latitude: float, longitude: float) -> dict:
             if fuel_prices:
                 country_info['fuel_prices'] = fuel_prices
             else:
-                # Default UAE fuel prices if API fails
+                # Default fuel prices based on country
                 if country_info['country'].lower() in ['united arab emirates', 'uae', 'الإمارات العربية المتحدة']:
                     country_info['fuel_prices'] = {
                         '95': 3.18,
                         '91': 3.03,
                         'diesel': 3.29
+                    }
+                elif country_info['country'].lower() in ['palestine', 'فلسطين']:
+                    country_info['fuel_prices'] = {
+                        '95': 7.7,
+                        '91': 7.2,
+                        'diesel': 7.2
                     }
                 else:
                     country_info['fuel_prices'] = {
@@ -180,12 +187,18 @@ def get_country_info(latitude: float, longitude: float) -> dict:
                     if fuel_prices:
                         country_info['fuel_prices'] = fuel_prices
                     else:
-                        # Default UAE fuel prices if API fails
+                        # Default fuel prices based on country
                         if country_info['country'].lower() in ['united arab emirates', 'uae', 'الإمارات العربية المتحدة']:
                             country_info['fuel_prices'] = {
                                 '95': 3.18,
                                 '91': 3.03,
                                 'diesel': 3.29
+                            }
+                        elif country_info['country'].lower() in ['palestine', 'فلسطين']:
+                            country_info['fuel_prices'] = {
+                                '95': 7.7,
+                                '91': 7.2,
+                                'diesel': 7.2
                             }
                         else:
                             country_info['fuel_prices'] = {
@@ -217,6 +230,33 @@ def get_coordinates(address: str) -> dict:
     geolocator = Nominatim(user_agent="road_map_app")
     
     try:
+        # Check if it's a Palestinian city
+        if address in PALESTINIAN_CITIES:
+            city_info = PALESTINIAN_CITIES[address]
+            coords = {
+                "latitude": city_info['lat'],
+                "longitude": city_info['lon'],
+                "address": address
+            }
+            
+            # Add country info for Palestinian cities
+            coords["country_info"] = {
+                "country": "فلسطين",
+                "currency": {
+                    "name": "شيكل إسرائيلي",
+                    "code": "ILS",
+                    "symbol": "₪"
+                },
+                "fuel_prices": {
+                    "95": 7.7,
+                    "91": 7.2,
+                    "diesel": 7.2
+                }
+            }
+            
+            write_cache(cache_key, coords)
+            return coords
+        
         # Get location
         location = geolocator.geocode(address)
         if location:
